@@ -13,6 +13,34 @@ function load_gridworld(xsize, i)
     return boolmatrix_to_grid(img, xsize)
 end
 
+function load_hardcoded_gridworld()
+mapstr = (
+"""
+wwwwwwwwwwwww
+w     w     w
+w     w     w
+w     w     w
+w     w     w
+wwww  wwww  wwwwwww
+w                 w
+wwwwwwwwwwwwwwwwwww
+"""
+)
+    lines = split(mapstr, '\n')
+    is_filled = [
+        [c == 'w' for c in line]
+        for line in split(mapstr, '\n')
+    ]
+    xsize, ysize = length(lines), maximum(length.(lines))
+    matrix = fill(true, ysize, xsize)
+    for (i, line) in enumerate(is_filled)
+        for (j, square) in enumerate(line)
+            matrix[j, i] = square
+        end
+    end
+    return boolmatrix_to_grid(matrix, ysize)
+end
+
 function load_png(i)
     pngpath = "../HouseExpoPng/"
     filename = readdir(pngpath)[i]
