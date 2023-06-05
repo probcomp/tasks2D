@@ -11,6 +11,7 @@ include("_raytrace_lowlevel.jl")
 """
 Compute the distances to the walls via raytracing.
 """
+# TODO: memoize this for performance
 function ray_trace_distances(w::GridWorld, n_rays)
     (x, y) = agentpos(w)
     pose = [x + .5; y + .5; 0.] # Pose from the center of the agent
