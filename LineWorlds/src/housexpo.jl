@@ -30,3 +30,24 @@ function load_env(fname="../../data/task_inputs/example_1.json", path_idx=3)
 
     return (; _segs, _boxes, _bb, _center, _xs, _hds, _ps, _dxs, _dhds, _us, _T)
 end
+
+function load_env_sparse(fname::String)
+    d = JSON.parsefile(fname)
+
+    verts    = Vector{Vector{Float64}}(d["verts"]);
+
+    _segs   = segments(verts);
+    _bb     = bounding_box(_segs)
+    _center = mean(_bb);
+
+    return (; _segs, _bb, _center)
+end
+function load_env_sparse(foldername::String, idx::Int)
+    # get a list of all the files in the folder:
+    files = readdir(foldername)
+
+    # construct fname
+    fname = joinpath(foldername, files[idx])
+
+    return load_env_sparse(fname)
+end

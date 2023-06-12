@@ -69,8 +69,8 @@ end
     log_ps, ps = eval_pose_vectors(
                     vs::Array{Vector{Float64}},
                     x::Vector{Vector{Float64}}, 
-                    segs::Vector{Segment}, as::Vector{Float}, w::Int, 
-                    s_noise::Float64, outlier::Float64, 
+                    segs::Vector{Segment},
+                    w::Int, s_noise::Float64, outlier::Float64, 
                     outlier_vol::Float64=1.0, zmax::Float64=100.0; sorted=false)
 
 Evaluates a collection of poses 
