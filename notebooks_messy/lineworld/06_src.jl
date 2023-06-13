@@ -192,7 +192,7 @@ macro get_pf(PARAMS, _grid_args, _t0_grid_args)
     GenPOMDPs.pf(
         pomdp, $(esc(PARAMS)),
         obs -> ( # Initialize via a 3-particle SMCP3 proposal.
-            5, # n particles
+            20, # n particles
             SMCP3Update(
                 forward_iterated_grid_proposal, backward_iterated_grid_proposal,
                 # is_initial_step, params, new_action, new_obs, grid_args
