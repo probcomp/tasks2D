@@ -163,6 +163,7 @@ function trace_and_pfstate_to_gif(tr, states, mint=nothing, maxt=nothing;
         has_labeled_obs = false
         has_labeled_pos = false
         if t in kidnapped_at
+            particles = states[t]
             for (w, tr) in zip(GPF.get_norm_weights(particles), GPF.get_traces(particles))
                 pf_t = get_args(tr)[1]
                 pos = tr[GenPOMDPs.state_addr(pf_t)]
