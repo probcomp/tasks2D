@@ -1,6 +1,6 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.8.0"
+julia_version = "1.8.5"
 manifest_format = "2.0"
 project_hash = "87ce0f002eff3383d25d65fcf73691aa94c53039"
 
@@ -202,7 +202,7 @@ version = "4.7.0"
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
-version = "0.5.2+0"
+version = "1.0.1+0"
 
 [[deps.ConcurrentUtilities]]
 deps = ["Serialization", "Sockets"]
@@ -493,7 +493,7 @@ version = "0.4.5"
 deps = ["Gen", "GenParticleFilters", "Observables", "Suppressor"]
 git-tree-sha1 = "58b20b0c0fec28c20c885b6a453a88f2d2f7ca22"
 repo-rev = "main"
-repo-url = "git@github.com:probcomp/GenPOMDPs.jl.git"
+repo-url = "https://github.com/probcomp/GenPOMDPs.jl"
 uuid = "f88df91c-fa0e-46d7-b73d-4420684e5acb"
 version = "0.1.0"
 
@@ -1529,7 +1529,7 @@ version = "1.10.1"
 [[deps.Tar]]
 deps = ["ArgTools", "SHA"]
 uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
-version = "1.10.0"
+version = "1.10.1"
 
 [[deps.TensorCore]]
 deps = ["LinearAlgebra"]
