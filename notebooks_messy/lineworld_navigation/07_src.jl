@@ -139,15 +139,21 @@ GenSMCP3.@kernel function forward_iterated_grid_proposal(tr, is_initial_step, pa
         grid_proposed_positions, _ = L.vector_grid(GenSMCP3.GenTraceKernelDSL.DynamicForwardDiff.value(pos), args...)
 
         if !is_initial_step
+            # The observations are highly informative, so it is okay to ignore the motion
+            # logprobs in the proposal.  This results in a bit of a speedup
+            # since currently the motion model involves some somewhat slow ray intersections
+            # which are not parallelized.
+
             # Get the logprobs under the motion model.  Also get the final
             # position the agent will end up at if each given position is sampled.
             # (This may not equal the sampled position, due to wall collisions.)
-            motion_logprobs_rets = [
-                Gen.assess(motion_model, (DFD.value(pos), new_action, params), choicemap((:pos, DFD.value(newpos))))
-                for newpos in reshape(grid_proposed_positions, (:,))
-            ]
-            motion_logprobs = [logp for (logp, r) in motion_logprobs_rets]
+            # motion_logprobs_rets = [
+            #     Gen.assess(motion_model, (DFD.value(pos), new_action, params), choicemap((:pos, DFD.value(newpos))))
+            #     for newpos in reshape(grid_proposed_positions, (:,))
+            # ]
+            # motion_logprobs = [logp for (logp, r) in motion_logprobs_rets]
             # grid_final_positions = [r for (logp, r) in motion_logprobs_rets]
+            motion_logprobs = [0. for _ in reshape(grid_proposed_positions, (:,))]
             grid_final_positions = reshape(grid_proposed_positions, (:,))
         else
             motion_logprobs = [0. for _ in reshape(grid_proposed_positions, (:,))]
