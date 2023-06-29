@@ -44,7 +44,7 @@ function load_env_sparse(fname::String)
 end
 function load_env_sparse(foldername::String, idx::Int)
     # get a list of all the files in the folder:
-    files = readdir(foldername)
+    files = sort(readdir(foldername))
 
     # construct fname
     fname = joinpath(foldername, files[idx])
