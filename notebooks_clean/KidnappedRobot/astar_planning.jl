@@ -43,7 +43,7 @@ function line_to_grid(_segs, _bb, ϵ)
 end
 
 taxi_dist((x, y), (x2, y2)) = abs(x - x2) + abs(y - y2)
-function find_action_using_grid_search(planning_params, start_linecoords, goal_linecoords)
+function find_action_using_grid_search(planning_params, start_linecoords, goal_linecoords)::Symbol
     (w, grid, edges, l_to_g, g_to_l) = planning_params
     
     actions = (:up, :down, :left, :right, :stay)
@@ -60,7 +60,7 @@ function find_action_using_grid_search(planning_params, start_linecoords, goal_l
         timeout = 10.
     )
 
-    length(results.path) == 1 && return (:stay, results.path)
+    length(results.path) == 1 && return :stay
     
     next_state = results.path[2]
     # println("next_state: ", g_to_l(next_state...))
