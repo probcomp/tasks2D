@@ -56,7 +56,7 @@ function load_houseexpo_gridworld(xsize, i)
 end
 
 function load_png(i)
-    pngpath = "../data/HouseExpoPng/"
+    pngpath = "../data/HouseExpoPngSmall/"
     filename = readdir(pngpath)[i]
     img = load(joinpath(pngpath, filename))
     return img
