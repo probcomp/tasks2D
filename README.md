@@ -8,7 +8,9 @@ Navigating this repository:
 - `Tasks2D/`: Julia package used to load the Julia environment needed to run the notebooks.
     This package also contains some basic utilities used in the notebooks.
 - `GridWorlds/`: Simple Julia package for 2D gridworld environments.
-- `LineWorlds/`: Simple Julia package for continuous-space 2D environments, with objects in the environment represented as collections of line segments.
+- `LineWorlds/`: Simple Julia package for continuous-space 2D environments, with objects in the environment represented as collections of line segments.  This also contains
+code for raycasting in line environments.  (Note that gridworld environments
+utilizing raycasting must load in the LineWorlds raycaster. See `GridWorlds/src/raytrace.jl` for etails.)
 - `notebooks_messy/`: Messy Jupyter notebooks used during development.  No promises that the code in these still runs.
 
 Also relevant:

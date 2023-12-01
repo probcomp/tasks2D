@@ -1,22 +1,32 @@
-#=
+"""
+This file contains code for raytracing in a grid world.
+Code for actual raycasting is in the LineWorlds sub-library.
+This file just contains util code for interfacing with the line-based
+raycasting code.
+
 Note that there are two coordinate systems in play: discrete grid coordinates
 and continuous coordinates.
 The discrete grid coordinate (x, y) corresponds to a square of continuous coordinates
 with bottom left corner (x, y) and top right corner (x+1, y+1).
-=#
-
-# Raytracing off line segments, in continuous coordinates.
-include("_raytrace_lowlevel.jl")
+"""
 
 """
 Compute the distances to the walls via raytracing.
+
+Args:
+- line_raycaster: line-based raycasting function.  (Typically, `cast` from the `LineWorlds` library.)
+  This is a function that takes in (poses, segments; num_a) and returns
+  a vector of distances to the walls along each ray. poses is (k, 3); segments is (n, 4).
+  num_a is the number of angles (number of rays to cast).
+- w - gridworld
+- n_rays = number of rays to cast
 """
 # TODO: memoize this for performance
-function ray_trace_distances(w::GridWorld, n_rays)
+function ray_trace_distances(line_raycaster, w::GridWorld, n_rays)
     (x, y) = agentpos(w)
     pose = [x + .5; y + .5; 0.] # Pose from the center of the agent
     poses = reshape(pose, (1, 3))
-    distances = cast_cpu(poses, wall_segments(w); num_a=n_rays) 
+    distances = line_raycaster(poses, wall_segments(w); num_a=n_rays) 
     return reshape(distances, (:,))
 end
 

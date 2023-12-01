@@ -13,7 +13,7 @@ include("fgridworld.jl")
 
 # Ray-tracing in gridworlds
 include("raytrace.jl")
-export ray_trace_distances, points_from_raytracing
+export ray_trace_distances, points_from_raytracing, wall_segments
 
 # Loading maps from datasets, or from manually created specifications
 include("maps.jl")

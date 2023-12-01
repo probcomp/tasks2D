@@ -255,6 +255,7 @@ function cast(ps::Array, segs::Array; fov=2π, num_a::Int=361, zmax::Float64=Inf
         return cast_cpu(ps, segs; fov=fov, num_a=num_a, zmax=zmax)
     end
 end;
+cast(ps, segs; kwargs...) = cast(collect(ps), collect(segs); kwargs...);
 
 function cast(ps_::CuArray, segs_::CuArray; fov=2π, num_a::Int=361, zmax::Float64=Inf)
     return cast_cu(ps_, segs_; fov=fov, num_a=num_a, zmax=zmax)
