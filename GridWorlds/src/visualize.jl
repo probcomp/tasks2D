@@ -36,8 +36,8 @@ end
 """
 Visualize a GridWorld.
 """
-function visualize_grid(w; resolution=(400, 400), kwargs...)
-    f = Makie.Figure(;resolution)
+function visualize_grid(w; size=(400, 400), kwargs...)
+    f = Makie.Figure(;size)
     ax = Makie.Axis(f[1, 1], aspect=Makie.DataAspect())
     Makie.hidedecorations!(ax)
     gridworldplot!(ax, w; kwargs...)
@@ -134,7 +134,7 @@ function interactive_gui(
     pos_obs_seq, # Observable of (pos_sequence, obs_sequence)
     take_action; # Callback function.  Accepts an action as input, and triggers an update to the pos_obs_seq
     plot_specs = DEFAULT_PLOT_SPECS(), # Specifications for a sequence of horizontally displayed plots
-    resolution=(800, 800),
+    size=(800, 800),
     additional_text="",
 )
     t = Observable(length(pos_obs_seq[][1]) - 1)
@@ -173,7 +173,7 @@ function interactive_gui(
     )
     
     ### Make plots ###
-    f = Makie.Figure(;resolution)
+    f = Makie.Figure(;size)
 
     for (i, plot) in enumerate(plot_specs)
         ax = Makie.Axis(f[1, i], aspect=Makie.DataAspect())
@@ -213,6 +213,96 @@ function interactive_gui(
 
     return (f, t)
 end
+
+##############################
+### Play as the agent mode ###
+##############################
+
+function play_as_agent_gui(
+    obs_seq, # Observable of obs_sequence
+    take_action;
+    size=(800, 800),
+    additional_text = "",
+    worldsize=20,
+    show_lines_to_walls=false
+)
+    t = Observable(length(obs_seq[]) - 1)
+
+    # Functions for interactivity
+    function timeup()
+        if t[] < length(obs_seq[]) - 1
+            t[] = t[] + 1
+        end
+    end
+    function timedown()
+        if t[] > 0
+            t[] = t[] - 1
+        end
+    end
+    function take_action_and_increment_time(a)
+        begin
+            # Only take the action if the displayed time
+            # is the farthest time we have simulated to
+            if t[] == length(obs_seq[]) - 1
+                take_action(a)
+                t[] = t[] + 1
+            end
+        end
+    end
+
+    ### Make plot ###
+    f = Makie.Figure(; size)
+    ax = Makie.Axis(f[1, 1], aspect=Makie.DataAspect())
+    Makie.hidedecorations!(ax)
+
+    # Plot obs
+    egocentric_obs_pts = @lift(
+        map(Point2, collect(zip(points_from_raytracing(
+            0, 0, # egocentric coordinates
+            $obs_seq[$t + 1]
+        )...)))
+    )
+
+    if show_lines_to_walls
+        linespec = @lift( collect(Iterators.flatten(
+            (Point2(-0.5, -0.5), pt, Point2(NaN, NaN)) for pt in $egocentric_obs_pts
+        )) )
+        Makie.lines!(ax, linespec)
+    end
+    Makie.scatter!(ax, egocentric_obs_pts)
+
+    # Plot agent as circle in the center of the map
+    Makie.scatter!(ax, [-0.5], [-0.5], color=:red)
+
+    # Makie.lines!(ax, Makie.lift(zero_pt_nan, obs_pt_xs), Makie.lift(zero_pt_nan, obs_pt_ys))
+
+    ### Display information ###
+    l = Makie.Label(f[2, :], lift(t, obs_seq) do t, obs_seq
+        str = "time: $t | max time simulated to: $(length(obs_seq) - 1)"
+        isempty(additional_text) ? str : (str * "\n" * additional_text)
+    end)
+    l.tellheight=true; l.tellwidth=false
+    
+    Makie.xlims!(ax, (-worldsize, worldsize))
+    Makie.ylims!(ax, (-worldsize, worldsize))
+
+    ### Register event listeners ###
+    register_keyboard_listeners(f;
+        keys=WASDE_TG_KEYS(),
+        callbacks=(;
+            up = () -> take_action_and_increment_time(:up),
+            down = () -> take_action_and_increment_time(:down),
+            left = () -> take_action_and_increment_time(:left),
+            right = () -> take_action_and_increment_time(:right),
+            stay = () -> take_action_and_increment_time(:stay),
+            timeup, timedown
+        )
+    )
+    
+    return (f, t)
+end
+
+##################
 
 # TODO: Allow the plot_specs to explicitly control where to put PF observations
 function display_pf_localization!(f::Makie.Figure, t::Makie.Observable, particles;
