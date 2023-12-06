@@ -132,10 +132,17 @@ Map T/G to incrementing/decrementing the displayed time.
 function interactive_gui(
     gridmap::GridWorld,
     pos_obs_seq, # Observable of (pos_sequence, obs_sequence)
+                 # where each obs is a list of distances
     take_action; # Callback function.  Accepts an action as input, and triggers an update to the pos_obs_seq
     plot_specs = DEFAULT_PLOT_SPECS(), # Specifications for a sequence of horizontally displayed plots
     size=(800, 800),
     additional_text="",
+
+    # If this is true, the agent is displayed as a discrete square
+    # in the map, rather than a continuous position.
+    # Its coordinates are discrete grid coordinates, not continuous coordinates.
+    display_agent_as_cell=false,
+    ray_angles=nothing # Defaults to LinRange(-π/2, 3π/2, num_angles)
 )
     t = Observable(length(pos_obs_seq[][1]) - 1)
 
@@ -161,14 +168,20 @@ function interactive_gui(
         end
     end
 
-    # GridWorld, with agent displayed
-    w = @lift(place_agent(gridmap, $pos_obs_seq[1][$t + 1]))
+    if display_agent_as_cell
+        # GridWorld, with agent displayed
+        w = @lift(place_agent(gridmap, $pos_obs_seq[1][$t + 1]))
+    else
+        w = gridmap
+    end
 
     # Points corresponding to the observed distances
     obs_pts = @lift(
         map(Point2, collect(zip(points_from_raytracing(
             ($pos_obs_seq[1][$t + 1])..., # agentx, agenty
-            $pos_obs_seq[2][$t + 1]      # observation points
+            $pos_obs_seq[2][$t + 1];      # observation points
+            angles=ray_angles,
+            is_continuous=!display_agent_as_cell
         )...)))
     )
     
@@ -185,6 +198,12 @@ function interactive_gui(
             wall => plot.show_map ? :black : :white
         )
         gridworldplot!(ax, w; squarecolors)
+
+        if !display_agent_as_cell
+            # If the agent is not displayed as a grid cell, we should
+            # display it as a point in continuous space.
+            Makie.scatter!(ax, @lift([Point2($pos_obs_seq[1][$t + 1]...)]), color=:red)
+        end
 
         if plot.show_obs
             Makie.scatter!(ax, obs_pts)
@@ -224,7 +243,8 @@ function play_as_agent_gui(
     size=(800, 800),
     additional_text = "",
     worldsize=20,
-    show_lines_to_walls=false
+    show_lines_to_walls=false,
+    ray_angles=nothing # Defaults to LinRange(-π/2, 3π/2, num_angles)
 )
     t = Observable(length(obs_seq[]) - 1)
 
@@ -259,20 +279,22 @@ function play_as_agent_gui(
     egocentric_obs_pts = @lift(
         map(Point2, collect(zip(points_from_raytracing(
             0, 0, # egocentric coordinates
-            $obs_seq[$t + 1]
+            $obs_seq[$t + 1];
+            angles=ray_angles,
+            is_continuous=true
         )...)))
     )
 
     if show_lines_to_walls
         linespec = @lift( collect(Iterators.flatten(
-            (Point2(-0.5, -0.5), pt, Point2(NaN, NaN)) for pt in $egocentric_obs_pts
+            (Point2(0, 0), pt, Point2(NaN, NaN)) for pt in $egocentric_obs_pts
         )) )
         Makie.lines!(ax, linespec)
     end
     Makie.scatter!(ax, egocentric_obs_pts)
 
     # Plot agent as circle in the center of the map
-    Makie.scatter!(ax, [-0.5], [-0.5], color=:red)
+    Makie.scatter!(ax, [0], [0], color=:red)
 
     # Makie.lines!(ax, Makie.lift(zero_pt_nan, obs_pt_xs), Makie.lift(zero_pt_nan, obs_pt_ys))
 
