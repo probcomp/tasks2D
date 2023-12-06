@@ -645,7 +645,7 @@ version = "0.4.6"
 
 [[deps.GenPOMDPs]]
 deps = ["Gen", "GenParticleFilters", "Observables", "Suppressor"]
-git-tree-sha1 = "a95018bd4784c71a8c6ec7f042f547ba44dbb496"
+git-tree-sha1 = "598e2276f831cfaec424f75a2d4964e07cdac8d9"
 repo-rev = "main"
 repo-url = "https://github.com/probcomp/GenPOMDPs.jl"
 uuid = "f88df91c-fa0e-46d7-b73d-4420684e5acb"
