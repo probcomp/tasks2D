@@ -173,7 +173,7 @@ function interactive_gui(
     )
     
     ### Make plots ###
-    f = Makie.Figure(;resolution)
+    f = Makie.Figure(;size=resolution)
 
     for (i, plot) in enumerate(plot_specs)
         ax = Makie.Axis(f[1, i], aspect=Makie.DataAspect())
