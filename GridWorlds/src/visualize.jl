@@ -15,7 +15,7 @@ export gridworldplot, visualize_grid, visualize_interactive_grid, interactive_gu
 """Makie plotting recipe for plotting a GridWorld"""
 Makie.@recipe(GridWorldPlot) do scene
     Makie.Attributes(
-        squarecolors = Dict(
+        squarecolors=Dict(
             empty => :white,
             wall => :black,
             agent => :red
@@ -26,9 +26,9 @@ function Makie.plot!(g::GridWorldPlot{<:Tuple{<:GridWorld}})
     w = g[1] # get the gridworld
 
     # plot the squares
-    rects = [Rect2( (x - 1, y - 1), (1, 1) ) for x in 1:size(w[])[1] for y in 1:size(w[])[2]]
+    rects = [Rect2((x - 1, y - 1), (1, 1)) for x in 1:size(w[])[1] for y in 1:size(w[])[2]]
     colors = @lift([$(g.squarecolors)[$w[x, y]] for x in 1:size(w[])[1] for y in 1:size(w[])[2]])
-    Makie.poly!(g, rects, color = colors)
+    Makie.poly!(g, rects, color=colors)
 
     g
 end
@@ -36,8 +36,8 @@ end
 """
 Visualize a GridWorld.
 """
-function visualize_grid(w; resolution=(400, 400), kwargs...)
-    f = Makie.Figure(;resolution)
+function visualize_grid(w; size=(400, 400), kwargs...)
+    f = Makie.Figure(; size)
     ax = Makie.Axis(f[1, 1], aspect=Makie.DataAspect())
     Makie.hidedecorations!(ax)
     gridworldplot!(ax, w; kwargs...)
@@ -53,18 +53,18 @@ end
 WASD -> up, left, down, right; E -> stay
 """
 WASDE_KEYS() = (
-    up    = [:w, :up],
-    down  = [:s, :down],
-    left  = [:a, :left],
-    right = [:d, :right],
-    stay  = [Makie.Keyboard.space, :e]
+    up=[:w, :up],
+    down=[:s, :down],
+    left=[:a, :left],
+    right=[:d, :right],
+    stay=[Makie.Keyboard.space, :e]
 )
 """
 WASD -> up, left, down, right; E -> stay;
 T -> Increment time; G -> Decrement time
 """
 WASDE_TG_KEYS() = (;
-    timeup = [:t], timedown = [:g],
+    timeup=[:t], timedown=[:g],
     WASDE_KEYS()...
 )
 
@@ -76,7 +76,7 @@ Register keyboard listeners for a Makie.Axis.
 """
 function register_keyboard_listeners(
     ax::Makie.Axis;
-    keys = WASDE_KEYS(),
+    keys=WASDE_KEYS(),
     callbacks,
 )
     Makie.on(Makie.events(ax).keyboardbutton) do event
@@ -101,22 +101,22 @@ so WASDE and arrow keys move the agent around.
 (specified by a symbol :up, :down, :left, :stay, or :right) and returns a new
 GridWorld.
 """
-function visualize_grid_with_interactive_agent(w; world_updater = move_agent, kwargs...)
+function visualize_grid_with_interactive_agent(w; world_updater=move_agent, kwargs...)
     if !(w isa Makie.Observable)
         w = Makie.Observable(w)
     end
     f = visualize_grid(w; kwargs...)
-    register_keyboard_listeners(f; controls = (;
-        up    = () -> w[] = world_updater(w[], :up),
-        down  = () -> w[] = world_updater(w[], :down),
-        left  = () -> w[] = world_updater(w[], :left),
-        right = () -> w[] = world_updater(w[], :right),
-        stay  = () -> w[] = world_updater(w[], :stay)
+    register_keyboard_listeners(f; controls=(;
+        up=() -> w[] = world_updater(w[], :up),
+        down=() -> w[] = world_updater(w[], :down),
+        left=() -> w[] = world_updater(w[], :left),
+        right=() -> w[] = world_updater(w[], :right),
+        stay=() -> w[] = world_updater(w[], :stay)
     ))
     f
 end
 
-DEFAULT_PLOT_SPECS() = [ (; show_map=true, show_agent=true, show_obs=true) ]
+DEFAULT_PLOT_SPECS() = [(; show_map=true, show_agent=true, show_obs=true)]
 """
 Visualize a GridWorld, and ray-trace point observations.
 Map WASDE to taking actions in the world.
@@ -133,8 +133,8 @@ function interactive_gui(
     gridmap::GridWorld,
     pos_obs_seq, # Observable of (pos_sequence, obs_sequence)
     take_action; # Callback function.  Accepts an action as input, and triggers an update to the pos_obs_seq
-    plot_specs = DEFAULT_PLOT_SPECS(), # Specifications for a sequence of horizontally displayed plots
-    resolution=(800, 800),
+    plot_specs=DEFAULT_PLOT_SPECS(), # Specifications for a sequence of horizontally displayed plots
+    size=(800, 800),
     additional_text="",
 )
     t = Observable(length(pos_obs_seq[][1]) - 1)
@@ -162,24 +162,24 @@ function interactive_gui(
     end
 
     # GridWorld, with agent displayed
-    w = @lift(place_agent(gridmap, $pos_obs_seq[1][$t + 1]))
+    w = @lift(place_agent(gridmap, $pos_obs_seq[1][$t+1]))
 
     # Points corresponding to the observed distances
     obs_pts = @lift(
         map(Point2, collect(zip(points_from_raytracing(
-            ($pos_obs_seq[1][$t + 1])..., # agentx, agenty
-            $pos_obs_seq[2][$t + 1]      # observation points
+            ($pos_obs_seq[1][$t+1])..., # agentx, agenty
+            $pos_obs_seq[2][$t+1]      # observation points
         )...)))
     )
-    
+
     ### Make plots ###
-    f = Makie.Figure(;size=resolution)
+    f = Makie.Figure(; size)
 
     for (i, plot) in enumerate(plot_specs)
         ax = Makie.Axis(f[1, i], aspect=Makie.DataAspect())
         Makie.hidedecorations!(ax)
 
-        squarecolors=Dict(
+        squarecolors = Dict(
             empty => :white,
             agent => plot.show_agent ? :red : :white,
             wall => plot.show_map ? :black : :white
@@ -196,17 +196,18 @@ function interactive_gui(
         str = "time: $t | max time simulated to: $(length(pos_obs_seq[1]) - 1)"
         isempty(additional_text) ? str : (str * "\n" * additional_text)
     end)
-    l.tellheight=true; l.tellwidth=false
-    
+    l.tellheight = true
+    l.tellwidth = false
+
     ### Register event listeners ###
     register_keyboard_listeners(f;
         keys=WASDE_TG_KEYS(),
         callbacks=(;
-            up = () -> take_action_and_increment_time(:up),
-            down = () -> take_action_and_increment_time(:down),
-            left = () -> take_action_and_increment_time(:left),
-            right = () -> take_action_and_increment_time(:right),
-            stay = () -> take_action_and_increment_time(:stay),
+            up=() -> take_action_and_increment_time(:up),
+            down=() -> take_action_and_increment_time(:down),
+            left=() -> take_action_and_increment_time(:left),
+            right=() -> take_action_and_increment_time(:right),
+            stay=() -> take_action_and_increment_time(:stay),
             timeup, timedown
         )
     )
@@ -234,7 +235,7 @@ positions_seq[t] gives the particle positions for the belief state at time t.
 function display_pf_localization!(ax::Makie.Axis, t, particles)
     display_pf_localization!(ax,
         @lift(
-            ( $particles[1][$t + 1], $particles[2][$t + 1] )
+            ($particles[1][$t+1], $particles[2][$t+1])
         )
     )
 end
@@ -245,10 +246,64 @@ for the belief state to be displayed.
 function display_pf_localization!(ax::Makie.Axis, particles)
     colors = @lift([Makie.RGBA(0, 1, 0, sqrt(w)) for w in $particles[1]])
     boxes = @lift([ # A rectangle for each particle
-        Rect2(Vec2([x .- 1, y .- 1]), Vec2([1., 1.]))
+        Rect2(Vec2([x .- 1, y .- 1]), Vec2([1.0, 1.0]))
         for (x, y) in $particles[2]
     ])
     Makie.poly!(ax, boxes; color=colors)
 end
+
+## Visualizations for internal maps
+function display_pf_state(t::Makie.Observable, particles;
+    plot_specs=DEFAULT_PLOT_SPECS(), size=(800, 800),
+)
+    figure = Makie.Figure(; size)
+    for (i, plot) in enumerate(plot_specs)
+        ax = Makie.Axis(figure[1, i], aspect=Makie.DataAspect())
+        Makie.hidedecorations!(ax)
+    end
+
+    display_pf_state!(figure, t, particles; plot_specs)
+    figure
+end
+
+function display_pf_state!(f::Makie.Figure, t::Makie.Observable, particles;
+    plot_specs=DEFAULT_PLOT_SPECS()
+)
+    for (i, plot) in enumerate(plot_specs)
+        if plot.show_map
+            ax = Makie.contents(f[1, i])[1]
+            display_pf_state!(ax, t, particles)
+        end
+    end
+end
+
+"""
+`particles` is an observable of (weights_seq, state_seq).
+weights_seq[t] gives the particle weights for the belief state at time t.
+state_seq[t] gives the particle positions and map for the belief state at time t.
+"""
+function display_pf_state!(ax::Makie.Axis, t, particles)
+    # Draw all the maps
+    num_particles = length(particles[][1][1])
+    for i in 1:num_particles
+        world = @lift($particles[2][$t+1][i].world)
+        weight = @lift($particles[1][$t+1][i])
+        # keep agent/empty square transparent so we can see the underlying map
+        squarecolors = @lift(Dict(
+            empty => Makie.RGBA(0, 0, 0, 0),
+            agent => Makie.RGBA(0, 0, 0, 0),
+            wall => Makie.RGBA(0, 0, 0, sqrt($weight)),
+        ))
+        gridworldplot!(ax, world; squarecolors)
+    end
+    # Draw the agent's position
+    display_pf_localization!(ax,
+        @lift(
+            ($particles[1][$t+1], map(state -> state.pos, $particles[2][$t+1]))
+        )
+    )
+
+end
+
 
 end
