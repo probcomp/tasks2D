@@ -68,6 +68,17 @@ WASDE_TG_KEYS() = (;
     WASDE_KEYS()...
 )
 
+"""
+WASDE, TG as above
+0 = animate from time 0
+8 = save current trace
+"""
+WASDE_TG_08_KEYS() = (;
+    WASDE_TG_KEYS()...,
+    animate_from_0 = [:0, :m],
+    save = [:8, :n]
+)
+
 ### Register keyboard listeners ###
 """
 Register keyboard listeners for a Makie.Axis.
@@ -142,7 +153,12 @@ function interactive_gui(
     # in the map, rather than a continuous position.
     # Its coordinates are discrete grid coordinates, not continuous coordinates.
     display_agent_as_cell=false,
-    ray_angles=nothing # Defaults to LinRange(-π/2, 3π/2, num_angles)
+
+    show_lines_to_walls=false,
+
+    ray_angles=nothing, # Defaults to LinRange(-π/2, 3π/2, num_angles)
+    save_fn = (() -> nothing),
+    framerate=2
 )
     t = Observable(length(pos_obs_seq[][1]) - 1)
 
@@ -206,6 +222,15 @@ function interactive_gui(
         end
 
         if plot.show_obs
+            if show_lines_to_walls
+                linespec = @lift( collect(Iterators.flatten(
+                    (Point2($pos_obs_seq[1][$t + 1]...),
+                    pt,
+                    Point2(NaN, NaN)) for pt in $obs_pts
+                )) )
+                Makie.lines!(ax, linespec, linewidth=0.5)
+            end
+        
             Makie.scatter!(ax, obs_pts)
         end
     end
@@ -218,19 +243,43 @@ function interactive_gui(
     l.tellheight=true; l.tellwidth=false
     
     ### Register event listeners ###
+    animate_from_zero = _animate_from_zero(t, () -> length(pos_obs_seq[][1]) - 1; framerate)
+    #     print("Animate from zero = $afz")
+    #     return afz
+    # end
+    function save_trace()
+        return nothing
+    end
     register_keyboard_listeners(f;
-        keys=WASDE_TG_KEYS(),
+        keys=WASDE_TG_08_KEYS(),
         callbacks=(;
             up = () -> take_action_and_increment_time(:up),
             down = () -> take_action_and_increment_time(:down),
             left = () -> take_action_and_increment_time(:left),
             right = () -> take_action_and_increment_time(:right),
             stay = () -> take_action_and_increment_time(:stay),
-            timeup, timedown
+            timeup, timedown,
+            animate_from_0 = () -> animate_from_zero(),
+            save = () -> save_fn()
         )
     )
 
     return (f, t)
+end
+
+
+function _animate_from_zero(t_observable, get_current_maxtime; framerate=2)
+    """
+    Animate from t=0.
+    """
+    function _do_animate()
+        println("[Animating]")
+        maxT = get_current_maxtime()
+        @async for t = 0:maxT
+            t_observable[] = t
+            sleep(1/framerate)
+        end
+    end
 end
 
 ##############################
@@ -244,7 +293,9 @@ function play_as_agent_gui(
     additional_text = "",
     worldsize=20,
     show_lines_to_walls=false,
-    ray_angles=nothing # Defaults to LinRange(-π/2, 3π/2, num_angles)
+    ray_angles=nothing, # Defaults to LinRange(-π/2, 3π/2, num_angles)
+    save_fn = (() -> nothing),
+    framerate=2
 )
     t = Observable(length(obs_seq[]) - 1)
 
@@ -289,7 +340,7 @@ function play_as_agent_gui(
         linespec = @lift( collect(Iterators.flatten(
             (Point2(0, 0), pt, Point2(NaN, NaN)) for pt in $egocentric_obs_pts
         )) )
-        Makie.lines!(ax, linespec)
+        Makie.lines!(ax, linespec, linewidth=0.5)
     end
     Makie.scatter!(ax, egocentric_obs_pts)
 
@@ -309,15 +360,21 @@ function play_as_agent_gui(
     Makie.ylims!(ax, (-worldsize, worldsize))
 
     ### Register event listeners ###
+    animate_from_zero = _animate_from_zero(t, () -> length(obs_seq[]) - 1; framerate)
+    function save_trace()
+        return nothing
+    end
     register_keyboard_listeners(f;
-        keys=WASDE_TG_KEYS(),
+        keys=WASDE_TG_08_KEYS(),
         callbacks=(;
             up = () -> take_action_and_increment_time(:up),
             down = () -> take_action_and_increment_time(:down),
             left = () -> take_action_and_increment_time(:left),
             right = () -> take_action_and_increment_time(:right),
             stay = () -> take_action_and_increment_time(:stay),
-            timeup, timedown
+            timeup, timedown,
+            animate_from_0 = () -> animate_from_zero(),
+            save = () -> save_fn()
         )
     )
     
