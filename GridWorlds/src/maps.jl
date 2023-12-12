@@ -8,6 +8,32 @@ using FileIO
 ### Manually written map specifications ###
 ###########################################
 
+_spec_1 = """
+wwwwwwwwwwwwwwwwwww
+w      w
+w      w
+w  ww  wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+w  ww  wwwwwwwwwwwwww           w      w      w
+w  w                            w      w      w
+w  w                            w      w      w
+w  wwwwwwwwwwwwwwwwwww          w      www  www
+w  ww  wwwwwwwwwwwwwww          w      www  www
+w  w                                          w
+w  w                                          w
+w  wwwwwwwwwwwwwwwwwww          w             w
+w  ww  wwwwwwwwwwwwwww          w             w
+w  w                            w             w
+w  w                            w             w
+w  wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww   w
+w                      wwwwwwwwwwwwwwwwwwww   w
+w                      wwwwwwwwwwwwwwwwwwww   w
+w                      w       wwwwwwwwwwww   w
+wwwwwww   wwwwww       w       wwwww          w
+www         www       w       wwwww          w
+www         www               wwwwwwwwwwwwwwww
+wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+"""
+
 MAP_SPECS() = [
     """
     wwwwwwwwwwwww
@@ -18,7 +44,8 @@ MAP_SPECS() = [
     wwww  wwww  wwwwwww
     w                 w
     wwwwwwwwwwwwwwwwwww
-    """
+    """,
+    _spec_1
 ] # We can add more maps here as needed
 
 """
@@ -39,7 +66,10 @@ function mapstr_to_gridworld(mapstr)
             matrix[j, i] = square
         end
     end
-    return boolmatrix_to_grid(matrix, ysize)
+    return boolmatrix_to_grid(flip_y_axis(matrix), ysize)
+end
+function flip_y_axis(matrix)
+    return matrix[:, end:-1:1]
 end
 
 ##################################
