@@ -34,3 +34,9 @@ map 18 - noisy - saves/2023-12-12T21:02:18.894__pomdp_trace.jld
 map 18 - me trying noisy - saves/2023-12-12T21:04:09.071__pomdp_trace.jld
 after that, I did:
 map 18 - me trying clean - saves/2023-12-12T21:05:45.266__pomdp_trace.jld
+
+
+
+
+***
+saves/2023-12-13T13:59:32.828__pomdp_trace.jld

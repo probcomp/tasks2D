@@ -63,4 +63,17 @@ function serializable_to_choicemap(s)
     return cm
 end
 
+### Dists ###
+struct MappedUniform <: Gen.Distribution{Any}; end
+Gen.random(::MappedUniform, mins, maxs) = [Gen.uniform(min, max) for (min, max) in zip(mins, maxs)]
+function Gen.logpdf(::MappedUniform, v, mins, maxs)
+    if length(v) != length(mins) || length(v) != length(maxs)
+        return -Inf
+    end
+    return sum(logpdf(Gen.uniform, val, min, max) for (val, min, max) in zip(v, mins, maxs))
+end
+mapped_uniform = MappedUniform()
+(::MappedUniform)(args...) = random(mapped_uniform, args...)
+
+
 end # module

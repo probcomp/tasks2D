@@ -8,17 +8,18 @@ module Viz
 import Makie
 using Makie: Vec2, Point2, Rect2, @lift, lift, Observable
 using ..GridWorlds: GridWorld, place_agent, move_agent, points_from_raytracing
-using ..GridWorlds: empty, wall, agent
+using ..GridWorlds: empty, wall, agent, strange
 
 export gridworldplot, visualize_grid, visualize_interactive_grid, interactive_gui, display_pf_localization!
 
 """Makie plotting recipe for plotting a GridWorld"""
 Makie.@recipe(GridWorldPlot) do scene
     Makie.Attributes(
-        squarecolors = Dict(
+        squarecolors=Dict(
             empty => :white,
+            agent => :red,
             wall => :black,
-            agent => :red
+            strange => :purple
         )
     )
 end
@@ -221,7 +222,8 @@ function interactive_gui(
         squarecolors=Dict(
             empty => :white,
             agent => plot.show_agent ? :red : :white,
-            wall => plot.show_map ? :black : :white
+            wall => plot.show_map ? :black : :white,
+            strange => plot.show_map ? :purple : :white
         )
         gridworldplot!(ax, w; squarecolors)
 

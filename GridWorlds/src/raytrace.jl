@@ -67,11 +67,21 @@ end
 """
 Line segments for the walls of a grid world.
 """
-function wall_segments(w)
+wall_segments(w) = _segments_for_celltypes(w, (wall,))
+"""
+Line segments for strange cells in the grid world.
+"""
+strange_segments(w) = _segments_for_celltypes(w, (strange,))
+"""
+Line segments for all nonempty cells in the grid world.
+"""
+nonempty_segments(w) = _segments_for_celltypes(w, (wall, strange, agent))
+
+function _segments_for_celltypes(w, celltypes)
     segments = Vector{Float64}[]
     for x=1:size(w)[1]
         for y=1:size(w)[2]
-            if w[x, y] == wall
+            if w[x, y] in celltypes
                 push!(segments, [x - 1, y - 1, x, y - 1])
                 push!(segments, [x - 1, y - 1, x - 1, y])
                 push!(segments, [x - 1, y, x, y])
@@ -79,5 +89,6 @@ function wall_segments(w)
             end
         end
     end
+    isempty(segments) && return Matrix{Float64}[]
     return Base.stack(segments) |> transpose
 end
