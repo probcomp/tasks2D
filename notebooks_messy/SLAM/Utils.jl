@@ -9,6 +9,24 @@ import Dates
 
 export serialize_pomdp_trace, deserialize_pomdp_trace
 
+function serialize_trace_and_viz_actions(filename, trace; args_to_serializeable=identity, viz_actions=nothing)
+    args = args_to_serializeable(get_args(trace))
+    Serialization.serialize(filename, Dict(
+        "args" => args,
+        "choices" => choicemap_to_serializable(get_choices(trace)),
+        "viz_actions" => viz_actions
+    ))
+    println("Trace & viz actions serialized to $filename.")
+end
+function deserialize_trace_and_viz_actions(filename, pomdp_trajectory_model; args_from_serializeable=identity)
+    s = Serialization.deserialize(filename)
+    args = args_from_serializeable(s["args"])
+    choices = serializable_to_choicemap(s["choices"])
+    viz_actions = s["viz_actions"]
+    tr, _ = Gen.generate(pomdp_trajectory_model, args, choices)
+    return tr, viz_actions
+end
+
 function serialize_pomdp_trace(filename, trace; args_to_serializeable = identity)
     args = args_to_serializeable(get_args(trace))
     Serialization.serialize(filename, Dict(
