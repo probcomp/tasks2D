@@ -48,20 +48,51 @@ w                              w    w
 w                              w    w
 w                              w    w
 w   wwwwwwwwwwwwwwwwwwwwwwwwwwww    w
-w                                   w
-w                                   w
-w                                   w
-w                                   w
-w                                   w
-w                                   w
 w         s                         w
 w         s                         w
 w         s                         w
 w         s                         w
+w         s                         w
+w         s                         w
+w         s                         w
+w                                   w
+w                                   w
+w                                   w
 w         s                   w     w
 w         s                  www    w
 w         s                   w     w
 w         s                         w
+wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+"""
+
+_spec_strange_2 = """
+wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+w                                   w
+w                                   w
+w                                   w
+w    wwwwwwwwwwwwwwwwwwwwwwwwwww    w
+w                              w    w
+w                              w    w
+w                              w    w
+wwwwwwwwwwwwwwwwwwwwwwwwwww    w    w
+w                              w    w
+w                              w    w
+w                              w    w
+w   wwwwwwwwwwwwwwwwwwwwwwwwwwww    w
+w               s                   w
+w               s                   w
+w                                   w
+w                                   w
+w                                   w
+w               s                   w
+w               s                   w
+w               s                   w
+w               s                   w
+w               s                   w
+w               s             w     w
+w               s            www    w
+w               s             w     w
+w               s                   w
 wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
 """
 
@@ -90,7 +121,9 @@ MAP_SPECS() = [
     wwwwwwwwwwwwwwww
     """,
     _spec_strange,
-    map(x -> x == 's' ? ' ' : x, _spec_strange)
+    map(x -> x == 's' ? ' ' : x, _spec_strange),
+    _spec_strange_2,
+    map(x -> x == 's' ? ' ' : x, _spec_strange_2),
 ] # We can add more maps here as needed
 
 """
