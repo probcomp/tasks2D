@@ -169,7 +169,9 @@ function interactive_gui(
     framerate=2,
     close_on_hitwall=false,
     did_hitwall_observable=nothing,
-    close_window=nothing
+    close_window=nothing,
+
+    timing_args=nothing # (action_times_observable, speedup_factor, max_delay)
 )
     t = Observable(length(pos_obs_seq[][1]) - 1)
     actions = []
@@ -259,7 +261,10 @@ function interactive_gui(
     
     ### Register event listeners ###
     # animate_from_zero = _animate_from_zero(t, () -> length(pos_obs_seq[][1]) - 1; framerate)
-    (animate_from_zero, pause_or_resume) = _get_animation_fns(t, () -> length(pos_obs_seq[][1]) - 1, actions; framerate)
+    (animate_from_zero, pause_or_resume) = _get_animation_fns(
+        t, () -> length(pos_obs_seq[][1]) - 1, actions;
+        framerate, timing_args
+    )
     register_keyboard_listeners(f;
         keys=WASDE_TG_08_SPACE_KEYS(),
         callbacks=(;
@@ -290,7 +295,10 @@ function interactive_gui(
     return (f, t, actions)
 end
 
-function _get_animation_fns(t_observable, get_current_maxtime, actions; framerate=2)
+function _get_animation_fns(t_observable, get_current_maxtime, actions;
+    framerate=2,
+    timing_args=nothing
+)
     is_paused = Ref(false)
     function initialize_animate(starttime)
         is_paused[] = false
@@ -299,7 +307,18 @@ function _get_animation_fns(t_observable, get_current_maxtime, actions; framerat
                 break;
             else
                 t_observable[] = t
-                sleep(1/framerate)
+
+                if isnothing(timing_args)
+                    sleep(1/framerate)
+                else
+                    (action_times_observable, speedup_factor, max_delay) = timing_args
+                    if 1 < t <= length(action_times_observable[])
+                        delta_ms = (action_times_observable[][t] - action_times_observable[][t - 1]).value
+                        delta_s = delta_ms / 1000
+                        waittime_s = min(delta_s/speedup_factor, max_delay)
+                        sleep(waittime_s)
+                    end
+                end
             end
         end
     end
@@ -355,7 +374,9 @@ function play_as_agent_gui(
     framerate=2,
     close_on_hitwall=false,
     did_hitwall_observable=nothing,
-    close_window=nothing
+    close_window=nothing,
+
+    timing_args=nothing # (action_times_observable, speedup_factor, max_delay)
 )
     t = Observable(length(obs_seq[]) - 1)
 
@@ -424,7 +445,10 @@ function play_as_agent_gui(
     Makie.ylims!(ax, (-worldsize, worldsize))
 
     ### Register event listeners ###
-    (animate_from_zero, pause_or_resume) = _get_animation_fns(t, () -> length(obs_seq[]) - 1, actions; framerate)
+    (animate_from_zero, pause_or_resume) = _get_animation_fns(
+        t, () -> length(obs_seq[]) - 1, actions;
+        framerate, timing_args
+    )
     register_keyboard_listeners(f;
         keys=WASDE_TG_08_SPACE_KEYS(),
         callbacks=(;
