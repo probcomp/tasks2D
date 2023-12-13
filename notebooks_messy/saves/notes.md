@@ -22,6 +22,9 @@ Noisy hard trace - saves/2023-12-12T17:45:51.846__pomdp_trace.jld
 clean version - saves/2023-12-12T20:52:10.206__pomdp_trace.jld
 noisy version - saves/2023-12-12T20:49:13.392__pomdp_trace.jld
 
+map 18 - clean - saves/2023-12-12T21:00:33.101__pomdp_trace.jld
+map 18 - noisy - saves/2023-12-12T21:02:18.894__pomdp_trace.jld
+
 me watching clean version - saves/2023-12-12T20:54:46.162__pomdp_trace.jld
 me watching noisy version - saves/2023-12-12T20:57:13.321__pomdp_trace.jld
 

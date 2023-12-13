@@ -26,11 +26,11 @@ w  w                            w             w
 w  w                            w             w
 w  wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww   w
 w                      wwwwwwwwwwwwwwwwwwww   w
-w                      wwwwwwwwwwwwwwwwwwww   w
+w                      ww      wwwwwwwwwwww   w
 w                      w       wwwwwwwwwwww   w
-wwwwwww   wwwwww       w       wwwww          w
-www         www       w       wwwww          w
-www         www               wwwwwwwwwwwwwwww
+wwwwwww   wwwwww     www       wwwww          w
+www         www               wwwww           w
+www         www               wwwwwwwwwwwwwwwww
 wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
 """
 

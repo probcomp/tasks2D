@@ -79,6 +79,13 @@ WASDE_TG_08_KEYS() = (;
     save = [:8, :n]
 )
 
+WASDE_TG_08_SPACE_KEYS() = (;
+    WASDE_TG_KEYS()...,
+    animate_from_0 = [:0, :m],
+    save = [:8, :n],
+    pause_or_resume = [Makie.Keyboard.space]
+)
+
 ### Register keyboard listeners ###
 """
 Register keyboard listeners for a Makie.Axis.
@@ -157,20 +164,23 @@ function interactive_gui(
     show_lines_to_walls=false,
 
     ray_angles=nothing, # Defaults to LinRange(-π/2, 3π/2, num_angles)
-    save_fn = (() -> nothing),
+    save_fn = (viz_actions -> nothing),
     framerate=2
 )
     t = Observable(length(pos_obs_seq[][1]) - 1)
+    actions = []
 
     # Functions for interactivity
     function timeup()
         if t[] < length(pos_obs_seq[][1]) - 1
             t[] = t[] + 1
+            push!(actions, (:timeup, t[]))
         end
     end
     function timedown()
         if t[] > 0
             t[] = t[] - 1
+            push!(actions, (:timedown, t[]))
         end
     end
     function take_action_and_increment_time(a)
@@ -243,15 +253,10 @@ function interactive_gui(
     l.tellheight=true; l.tellwidth=false
     
     ### Register event listeners ###
-    animate_from_zero = _animate_from_zero(t, () -> length(pos_obs_seq[][1]) - 1; framerate)
-    #     print("Animate from zero = $afz")
-    #     return afz
-    # end
-    function save_trace()
-        return nothing
-    end
+    # animate_from_zero = _animate_from_zero(t, () -> length(pos_obs_seq[][1]) - 1; framerate)
+    (animate_from_zero, pause_or_resume) = _get_animation_fns(t, () -> length(pos_obs_seq[][1]) - 1, actions; framerate)
     register_keyboard_listeners(f;
-        keys=WASDE_TG_08_KEYS(),
+        keys=WASDE_TG_08_SPACE_KEYS(),
         callbacks=(;
             up = () -> take_action_and_increment_time(:up),
             down = () -> take_action_and_increment_time(:down),
@@ -259,14 +264,52 @@ function interactive_gui(
             right = () -> take_action_and_increment_time(:right),
             stay = () -> take_action_and_increment_time(:stay),
             timeup, timedown,
-            animate_from_0 = () -> animate_from_zero(),
-            save = () -> save_fn()
+            animate_from_0 = animate_from_zero,
+            save = () -> save_fn(actions),
+            pause_or_resume = pause_or_resume
         )
     )
 
-    return (f, t)
+    # Actions is a vector which will be populated with pairs (action, time)
+    # for actions in [timeup, timedown, pause, resume]
+    # to track how a user interacts with the visualization.
+    return (f, t, actions)
 end
 
+function _get_animation_fns(t_observable, get_current_maxtime, actions; framerate=2)
+    is_paused = Ref(false)
+    function initialize_animate(starttime)
+        is_paused[] = false
+        @async for t = starttime:get_current_maxtime()
+            if is_paused[]
+                break;
+            else
+                t_observable[] = t
+                sleep(1/framerate)
+            end
+        end
+    end
+    function animate_from_zero()
+        push!(actions, (:animate_from_zero, 0))
+        initialize_animate(0)
+    end
+    function resume()
+        push!(actions, (:resume, t_observable[]))
+        initialize_animate(t_observable[])
+    end
+    function pause()
+        push!(actions, (:pause, t_observable[]))
+        is_paused[] = true
+    end
+    function pause_or_resume()
+        if is_paused[]
+            resume()
+        else
+            pause()
+        end
+    end
+    return (animate_from_zero, pause_or_resume)
+end
 
 function _animate_from_zero(t_observable, get_current_maxtime; framerate=2)
     """
@@ -294,20 +337,24 @@ function play_as_agent_gui(
     worldsize=20,
     show_lines_to_walls=false,
     ray_angles=nothing, # Defaults to LinRange(-π/2, 3π/2, num_angles)
-    save_fn = (() -> nothing),
+    save_fn = (viz_actions -> nothing),
     framerate=2
 )
     t = Observable(length(obs_seq[]) - 1)
+
+    actions = []
 
     # Functions for interactivity
     function timeup()
         if t[] < length(obs_seq[]) - 1
             t[] = t[] + 1
+            push!(actions, (:timeup, t[]))
         end
     end
     function timedown()
         if t[] > 0
             t[] = t[] - 1
+            push!(actions, (:timedown, t[]))
         end
     end
     function take_action_and_increment_time(a)
@@ -360,12 +407,9 @@ function play_as_agent_gui(
     Makie.ylims!(ax, (-worldsize, worldsize))
 
     ### Register event listeners ###
-    animate_from_zero = _animate_from_zero(t, () -> length(obs_seq[]) - 1; framerate)
-    function save_trace()
-        return nothing
-    end
+    (animate_from_zero, pause_or_resume) = _get_animation_fns(t, () -> length(obs_seq[]) - 1, actions; framerate)
     register_keyboard_listeners(f;
-        keys=WASDE_TG_08_KEYS(),
+        keys=WASDE_TG_08_SPACE_KEYS(),
         callbacks=(;
             up = () -> take_action_and_increment_time(:up),
             down = () -> take_action_and_increment_time(:down),
@@ -373,12 +417,13 @@ function play_as_agent_gui(
             right = () -> take_action_and_increment_time(:right),
             stay = () -> take_action_and_increment_time(:stay),
             timeup, timedown,
-            animate_from_0 = () -> animate_from_zero(),
-            save = () -> save_fn()
+            animate_from_0 = animate_from_zero,
+            save = () -> save_fn(actions),
+            pause_or_resume = pause_or_resume
         )
     )
     
-    return (f, t)
+    return (f, t, actions)
 end
 
 ##################
