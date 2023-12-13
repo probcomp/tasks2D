@@ -35,31 +35,34 @@ wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
 """
 
 _spec_strange = """
-wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
-w                                 w
-w                                 w
-w  wwwwwwwwwwwwwwwwwwwwwwwwwwww   w
-w                             w   w
-w                             w   w
-wwwwwwwwwwwwwwwwwwwwwwwwwww   w   w
-w                             w   w
-w                             w   w
-w  wwwwwwwwwwwwwwwwwwwwwwwwwwww   w
-w                                 w
-w                                 w
-w                                 w
-w                                 w
-w                                 w
-w                                 w
-w        s                        w
-w        s                        w
-w        s                        w
-w        s                        w
-w        s                   w    w
-w        s                  www   w
-w                            w    w
-w                                 w
-wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+w                                   w
+w                                   w
+w                                   w
+w    wwwwwwwwwwwwwwwwwwwwwwwwwww    w
+w                              w    w
+w                              w    w
+w                              w    w
+wwwwwwwwwwwwwwwwwwwwwwwwwww    w    w
+w                              w    w
+w                              w    w
+w                              w    w
+w   wwwwwwwwwwwwwwwwwwwwwwwwwwww    w
+w                                   w
+w                                   w
+w                                   w
+w                                   w
+w                                   w
+w                                   w
+w         s                         w
+w         s                         w
+w         s                         w
+w         s                         w
+w         s                   w     w
+w         s                  www    w
+w         s                   w     w
+w         s                         w
+wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
 """
 
 MAP_SPECS() = [
