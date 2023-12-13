@@ -149,7 +149,7 @@ Map T/G to incrementing/decrementing the displayed time.
     each specification is a named tuple of booleans (show_map, show_agent, show_obs).
 """
 function interactive_gui(
-    gridmap::GridWorld,
+    t_to_gridmap,
     pos_obs_seq, # Observable of (pos_sequence, obs_sequence)
                  # where each obs is a list of distances
     take_action; # Callback function.  Accepts an action as input, and triggers an update to the pos_obs_seq
@@ -200,9 +200,10 @@ function interactive_gui(
         end
     end
 
+    gridmap = @lift(t_to_gridmap($t))
     if display_agent_as_cell
         # GridWorld, with agent displayed
-        w = @lift(place_agent(gridmap, $pos_obs_seq[1][$t + 1]))
+        w = @lift(place_agent($gridmap, $pos_obs_seq[1][$t + 1]))
     else
         w = gridmap
     end
