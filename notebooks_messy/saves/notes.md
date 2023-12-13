@@ -40,3 +40,5 @@ map 18 - me trying clean - saves/2023-12-12T21:05:45.266__pomdp_trace.jld
 
 ***
 saves/2023-12-13T13:59:32.828__pomdp_trace.jld
+
+saves/2023-12-13T14:23:50.487__pomdp_trace.jld

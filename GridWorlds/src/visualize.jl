@@ -166,7 +166,10 @@ function interactive_gui(
 
     ray_angles=nothing, # Defaults to LinRange(-π/2, 3π/2, num_angles)
     save_fn = (viz_actions -> nothing),
-    framerate=2
+    framerate=2,
+    close_on_hitwall=false,
+    did_hitwall_observable=nothing,
+    close_window=nothing
 )
     t = Observable(length(pos_obs_seq[][1]) - 1)
     actions = []
@@ -272,6 +275,15 @@ function interactive_gui(
         )
     )
 
+    if close_on_hitwall && !isnothing(close_window)
+        Makie.on(did_hitwall_observable) do hitwall
+            if hitwall
+                save_fn(actions)
+                close_window(f)
+            end
+        end
+    end
+
     # Actions is a vector which will be populated with pairs (action, time)
     # for actions in [timeup, timedown, pause, resume]
     # to track how a user interacts with the visualization.
@@ -340,7 +352,10 @@ function play_as_agent_gui(
     show_lines_to_walls=false,
     ray_angles=nothing, # Defaults to LinRange(-π/2, 3π/2, num_angles)
     save_fn = (viz_actions -> nothing),
-    framerate=2
+    framerate=2,
+    close_on_hitwall=false,
+    did_hitwall_observable=nothing,
+    close_window=nothing
 )
     t = Observable(length(obs_seq[]) - 1)
 
@@ -425,6 +440,16 @@ function play_as_agent_gui(
         )
     )
     
+
+    if close_on_hitwall && !isnothing(close_window)
+        Makie.on(did_hitwall_observable) do hitwall
+            if hitwall
+                save_fn(actions)
+                close_window(f)
+            end
+        end
+    end
+
     return (f, t, actions)
 end
 
