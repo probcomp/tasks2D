@@ -539,4 +539,77 @@ function display_pf_localization!(ax::Makie.Axis, particles)
     Makie.poly!(ax, boxes; color=colors)
 end
 
+DEFAULT_SQUARE_COLORS = Dict(
+    empty => Makie.RGBA(1, 1, 1, 0),
+    agent => :red,
+    wall => :black,
+    strange => :purple
+)
+function plot_paths(
+    gridmap,
+    paths, # List of sequences of (x, y) positions
+    size=(800, 800)
+)
+    f = Makie.Figure(; size)
+    ax = Makie.Axis(f[1, 1], aspect=Makie.DataAspect())
+    Makie.hidedecorations!(ax)
+    gridworldplot!(ax, gridmap; squarecolors=DEFAULT_SQUARE_COLORS)
+
+    # Plot paths
+    for path in paths
+        path_pts = map(Point2, path)
+        Makie.lines!(ax, path_pts, color=1:length(path))
+    end
+
+    return f
 end
+
+function time_heatmap(
+    gridmap,
+    paths, # List of (x, y) positions
+    timess; # List of times
+    size=(800, 800),
+    clip_ms=5_000, # Clip time spent at a square to this many ms
+    use_times=true, # otherwise, plot based on frequencies
+    title="",
+    do_avg=true,
+    n_to_avg_over=length(paths),
+    times_colorrange=(0, 5_000),
+    steps_colorrange=(0, 6)
+)
+    f = Makie.Figure(; size)
+    ax = Makie.Axis(f[1, 1]; aspect=Makie.DataAspect(), title)
+    Makie.hidedecorations!(ax)
+
+    xsize, ysize = Base.size(gridmap)
+    heatmap = zeros(xsize, ysize)
+
+    for (path, times) in zip(paths, timess)
+        for (i, (x, y)) in enumerate(path)
+            i == 1 && continue
+            if use_times
+                if i < length(times)
+                    delta_t = (times[i + 1] - times[i]).value
+                    delta_t = min(delta_t, clip_ms)
+                    heatmap[Int(floor(x + 0.5)), Int(floor(y + 0.5))] += delta_t
+                end
+            else
+                heatmap[Int(floor(x + 0.5)), Int(floor(y + 0.5))] += 1
+            end
+        end
+    end
+    if do_avg
+        heatmap /= n_to_avg_over
+    end
+
+    hm = Makie.heatmap!(ax, 0:1.0:(xsize), 0:1.0:(ysize), heatmap, colormap=:tempo,
+        colorrange=(use_times ? times_colorrange : steps_colorrange)
+    )
+
+    gridworldplot!(ax, gridmap; squarecolors=DEFAULT_SQUARE_COLORS)
+
+    Makie.Colorbar(f[1, 2], hm, label=(use_times ? "Time spent at square (ms)" : "# Steps spent in square"))
+
+    return f
+end
+end # module
