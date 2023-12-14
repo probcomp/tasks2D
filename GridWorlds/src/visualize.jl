@@ -284,9 +284,20 @@ function interactive_gui(
     if close_on_hitwall && !isnothing(close_window)
         Makie.on(did_hitwall_observable) do hitwall
             if hitwall
-                save_fn(actions)
+                # save_fn(actions) # No need for this now; window closing will trigger this
                 close_window(f)
             end
+        end
+    end
+
+    # Save whenever the window closes.
+    closed = Ref(false)
+    Makie.on(Makie.events(f).window_open) do isopen
+        if !closed[] && !isopen
+            closed[] = true
+            save_fn(actions)
+        elseif isopen
+            closed[] = false
         end
     end
 
@@ -469,9 +480,20 @@ function play_as_agent_gui(
     if close_on_hitwall && !isnothing(close_window)
         Makie.on(did_hitwall_observable) do hitwall
             if hitwall
-                save_fn(actions)
+                # save_fn(actions) # No need for this now; window closing will trigger this
                 close_window(f)
             end
+        end
+    end
+
+    # Save whenever the window closes.
+    closed = Ref(false)
+    Makie.on(Makie.events(f).window_open) do isopen
+        if !closed[] && !isopen
+            closed[] = true
+            save_fn(actions)
+        elseif isopen
+            closed[] = false
         end
     end
 
