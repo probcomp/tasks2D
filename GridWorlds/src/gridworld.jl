@@ -3,8 +3,13 @@
 ### GridWorld Interface ### 
 ###########################
 
-"""Value which can occupy a cell in a gridworld."""
-@enum GridCell empty wall agent
+"""
+Value which can occupy a cell in a gridworld.
+
+A `strange` cell causes strange behavior from
+the observation model.
+"""
+@enum GridCell empty wall strange agent
 
 """A world state for a 2D Grid environment."""
 abstract type GridWorld end

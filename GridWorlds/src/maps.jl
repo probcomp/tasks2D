@@ -8,6 +8,94 @@ using FileIO
 ### Manually written map specifications ###
 ###########################################
 
+_spec_1 = """
+wwwwwwwwwwwwwwwwwww
+w      w
+w      w
+w  ww  wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+w  ww  wwwwwwwwwwwwww           w      w      w
+w  w                            w      w      w
+w  w                            w      w      w
+w  wwwwwwwwwwwwwwwwwww          w      www  www
+w  ww  wwwwwwwwwwwwwww          w      www  www
+w  w                                          w
+w  w                                          w
+w  wwwwwwwwwwwwwwwwwww          w             w
+w  ww  wwwwwwwwwwwwwww          w             w
+w  w                            w             w
+w  w                            w             w
+w  wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww   w
+w                      wwwwwwwwwwwwwwwwwwww   w
+w                      ww      wwwwwwwwwwww   w
+w                      w       wwwwwwwwwwww   w
+wwwwwww   wwwwww     www       wwwww          w
+www         www               wwwww           w
+www         www               wwwwwwwwwwwwwwwww
+wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+"""
+
+_spec_strange = """
+wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+w                                   w
+w                                   w
+w                                   w
+w    wwwwwwwwwwwwwwwwwwwwwwwwwww    w
+w                              w    w
+w                              w    w
+w                              w    w
+wwwwwwwwwwwwwwwwwwwwwwwwwww    w    w
+w                              w    w
+w                              w    w
+w                              w    w
+w   wwwwwwwwwwwwwwwwwwwwwwwwwwww    w
+w         s                         w
+w         s                         w
+w         s                         w
+w         s                         w
+w         s                         w
+w         s                         w
+w         s                         w
+w                                   w
+w                                   w
+w                                   w
+w         s                   w     w
+w         s                  www    w
+w         s                   w     w
+w         s                         w
+wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+"""
+
+_spec_strange_2 = """
+wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+w                                   w
+w                                   w
+w                                   w
+w    wwwwwwwwwwwwwwwwwwwwwwwwwww    w
+w                              w    w
+w                              w    w
+w                              w    w
+wwwwwwwwwwwwwwwwwwwwwwwwwww    w    w
+w                              w    w
+w                              w    w
+w                              w    w
+w   wwwwwwwwwwwwwwwwwwwwwwwwwwww    w
+w               s                   w
+w               s                   w
+w                                   w
+w                                   w
+w                                   w
+w               s                   w
+w               s                   w
+w               s                   w
+w               s                   w
+w               s                   w
+w               s             w     w
+w               s            www    w
+w               s             w     w
+w               s                   w
+wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww
+"""
+
 MAP_SPECS() = [
     """
     wwwwwwwwwwwww
@@ -18,7 +106,24 @@ MAP_SPECS() = [
     wwww  wwww  wwwwwww
     w                 w
     wwwwwwwwwwwwwwwwwww
+    """,
+    _spec_1,
     """
+    wwwwwwwwwwwwwwww
+    w              w
+    w              w
+    w        s     w
+    w        s     w
+    w        s     w
+    w        s     w
+    w              w
+    w              w
+    wwwwwwwwwwwwwwww
+    """,
+    _spec_strange,
+    map(x -> x == 's' ? ' ' : x, _spec_strange),
+    _spec_strange_2,
+    map(x -> x == 's' ? ' ' : x, _spec_strange_2),
 ] # We can add more maps here as needed
 
 """
@@ -27,19 +132,52 @@ Load the `i`th map from the built-in library of custom maps.
 load_custom_map(i) = mapstr_to_gridworld(MAP_SPECS()[i])
 
 function mapstr_to_gridworld(mapstr)
-    lines = split(mapstr, '\n')
-    is_filled = [
-        [c == 'w' for c in line]
-        for line in split(mapstr, '\n')
-    ]
+    lines = split(mapstr, '\n')[1:end-1]
+    # is_filled = [
+    #     [c != ' ' for c in line]
+    #     for line in split(mapstr, '\n')
+    # ]
     xsize, ysize = length(lines), maximum(length.(lines))
-    matrix = fill(true, ysize, xsize)
-    for (i, line) in enumerate(is_filled)
+    matrix = fill(wall, ysize, xsize)
+    for (i, line) in enumerate(lines)
         for (j, square) in enumerate(line)
-            matrix[j, i] = square
+            sq = square == 'w' ? wall :
+                 square == 's' ? strange :
+                 square == 'a' ? agent :
+                 square == ' ' ? empty :
+                 error("Unrecognized square type in string: $square")
+            matrix[j, i] = sq
         end
     end
-    return boolmatrix_to_grid(matrix, ysize)
+
+    return FGridWorld(flip_y_axis(matrix), nothing, (ysize, xsize))
+end
+    # matrix = fill(true, ysize, xsize)
+    # for (i, line) in enumerate(is_filled)
+    #     for (j, square) in enumerate(line)
+    #         matrix[j, i] = square
+    #     end
+    # end
+    # map = boolmatrix_to_grid(flip_y_axis(matrix), ysize)
+
+    # for (i, line) in enumerate(is_filled)
+    #     for (j, square) in enumerate(line)
+    #         if square != 'w'
+    #             if square == 's'
+    #                 sq = strange
+    #             elseif square == 'a'
+    #                 sq = agent
+    #             else
+    #                 error("Unrecognized square type in string: $square")
+    #             end
+    #             map = replace(all_walls_map, (i, j), sq)
+    #         end
+    #     end
+    # end
+    # return map
+# end
+function flip_y_axis(matrix)
+    return matrix[:, end:-1:1]
 end
 
 ##################################
