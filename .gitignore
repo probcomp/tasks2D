@@ -3,3 +3,4 @@
 **/*.jld
 data/HouseExpoPng/
 **/*.txt
+.vscode
