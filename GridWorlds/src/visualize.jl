@@ -76,15 +76,15 @@ WASDE, TG as above
 """
 WASDE_TG_08_KEYS() = (;
     WASDE_TG_KEYS()...,
-    animate_from_0 = [:0, :m],
-    save = [:8, :n]
+    animate_from_0=[:0, :m],
+    save=[:8, :n]
 )
 
 WASDE_TG_08_SPACE_KEYS() = (;
     WASDE_TG_KEYS()...,
-    animate_from_0 = [:0, :m],
-    save = [:8, :n],
-    pause_or_resume = [Makie.Keyboard.space]
+    animate_from_0=[:0, :m],
+    save=[:8, :n],
+    pause_or_resume=[Makie.Keyboard.space]
 )
 
 ### Register keyboard listeners ###
@@ -151,7 +151,7 @@ Map T/G to incrementing/decrementing the displayed time.
 function interactive_gui(
     t_to_gridmap,
     pos_obs_seq, # Observable of (pos_sequence, obs_sequence)
-                 # where each obs is a list of distances
+    # where each obs is a list of distances
     take_action; # Callback function.  Accepts an action as input, and triggers an update to the pos_obs_seq
     plot_specs=DEFAULT_PLOT_SPECS(), # Specifications for a sequence of horizontally displayed plots
     size=(800, 800),
@@ -160,18 +160,12 @@ function interactive_gui(
     # If this is true, the agent is displayed as a discrete square
     # in the map, rather than a continuous position.
     # Its coordinates are discrete grid coordinates, not continuous coordinates.
-    display_agent_as_cell=false,
-
-    show_lines_to_walls=false,
-
-    ray_angles=nothing, # Defaults to LinRange(-π/2, 3π/2, num_angles)
-    save_fn = (viz_actions -> nothing),
+    display_agent_as_cell=false, show_lines_to_walls=false, ray_angles=nothing, # Defaults to LinRange(-π/2, 3π/2, num_angles)
+    save_fn=(viz_actions -> nothing),
     framerate=2,
     close_on_hitwall=false,
     did_hitwall_observable=nothing,
-    close_window=nothing,
-
-    timing_args=nothing # (action_times_observable, speedup_factor, max_delay)
+    close_window=nothing, timing_args=nothing # (action_times_observable, speedup_factor, max_delay)
 )
     t = Observable(length(pos_obs_seq[][1]) - 1)
     actions = []
@@ -203,7 +197,7 @@ function interactive_gui(
     gridmap = @lift(t_to_gridmap($t))
     if display_agent_as_cell
         # GridWorld, with agent displayed
-        w = @lift(place_agent($gridmap, $pos_obs_seq[1][$t + 1]))
+        w = @lift(place_agent($gridmap, $pos_obs_seq[1][$t+1]))
     else
         w = gridmap
     end
@@ -211,8 +205,8 @@ function interactive_gui(
     # Points corresponding to the observed distances
     obs_pts = @lift(
         map(Point2, collect(zip(points_from_raytracing(
-            ($pos_obs_seq[1][$t + 1])..., # agentx, agenty
-            $pos_obs_seq[2][$t + 1];      # observation points
+            ($pos_obs_seq[1][$t+1])..., # agentx, agenty
+            $pos_obs_seq[2][$t+1];      # observation points
             angles=ray_angles,
             is_continuous=!display_agent_as_cell
         )...)))
@@ -236,19 +230,19 @@ function interactive_gui(
         if !display_agent_as_cell
             # If the agent is not displayed as a grid cell, we should
             # display it as a point in continuous space.
-            Makie.scatter!(ax, @lift([Point2($pos_obs_seq[1][$t + 1]...)]), color=:red)
+            Makie.scatter!(ax, @lift([Point2($pos_obs_seq[1][$t+1]...)]), color=:red)
         end
 
         if plot.show_obs
             if show_lines_to_walls
-                linespec = @lift( collect(Iterators.flatten(
-                    (Point2($pos_obs_seq[1][$t + 1]...),
-                    pt,
-                    Point2(NaN, NaN)) for pt in $obs_pts
-                )) )
+                linespec = @lift(collect(Iterators.flatten(
+                    (Point2($pos_obs_seq[1][$t+1]...),
+                        pt,
+                        Point2(NaN, NaN)) for pt in $obs_pts
+                )))
                 Makie.lines!(ax, linespec, linewidth=0.5)
             end
-        
+
             Makie.scatter!(ax, obs_pts)
         end
     end
@@ -270,15 +264,15 @@ function interactive_gui(
     register_keyboard_listeners(f;
         keys=WASDE_TG_08_SPACE_KEYS(),
         callbacks=(;
-            up = () -> take_action_and_increment_time(:up),
-            down = () -> take_action_and_increment_time(:down),
-            left = () -> take_action_and_increment_time(:left),
-            right = () -> take_action_and_increment_time(:right),
-            stay = () -> take_action_and_increment_time(:stay),
+            up=() -> take_action_and_increment_time(:up),
+            down=() -> take_action_and_increment_time(:down),
+            left=() -> take_action_and_increment_time(:left),
+            right=() -> take_action_and_increment_time(:right),
+            stay=() -> take_action_and_increment_time(:stay),
             timeup, timedown,
-            animate_from_0 = animate_from_zero,
-            save = () -> save_fn(actions),
-            pause_or_resume = pause_or_resume
+            animate_from_0=animate_from_zero,
+            save=() -> save_fn(actions),
+            pause_or_resume=pause_or_resume
         )
     )
 
@@ -317,18 +311,18 @@ function _get_animation_fns(t_observable, get_current_maxtime, actions;
         is_paused[] = false
         @async for t = starttime:get_current_maxtime()
             if is_paused[]
-                break;
+                break
             else
                 t_observable[] = t
 
                 if isnothing(timing_args)
-                    sleep(1/framerate)
+                    sleep(1 / framerate)
                 else
                     (action_times_observable, speedup_factor, max_delay) = timing_args
                     if 1 < t <= length(action_times_observable[])
-                        delta_ms = (action_times_observable[][t] - action_times_observable[][t - 1]).value
+                        delta_ms = (action_times_observable[][t] - action_times_observable[][t-1]).value
                         delta_s = delta_ms / 1000
-                        waittime_s = min(delta_s/speedup_factor, max_delay)
+                        waittime_s = min(delta_s / speedup_factor, max_delay)
                         sleep(waittime_s)
                     end
                 end
@@ -366,7 +360,7 @@ function _animate_from_zero(t_observable, get_current_maxtime; framerate=2)
         maxT = get_current_maxtime()
         @async for t = 0:maxT
             t_observable[] = t
-            sleep(1/framerate)
+            sleep(1 / framerate)
         end
     end
 end
@@ -379,17 +373,15 @@ function play_as_agent_gui(
     obs_seq, # Observable of obs_sequence
     take_action;
     size=(800, 800),
-    additional_text = "",
+    additional_text="",
     worldsize=20,
     show_lines_to_walls=false,
     ray_angles=nothing, # Defaults to LinRange(-π/2, 3π/2, num_angles)
-    save_fn = (viz_actions -> nothing),
+    save_fn=(viz_actions -> nothing),
     framerate=2,
     close_on_hitwall=false,
     did_hitwall_observable=nothing,
-    close_window=nothing,
-
-    timing_args=nothing # (action_times_observable, speedup_factor, max_delay)
+    close_window=nothing, timing_args=nothing # (action_times_observable, speedup_factor, max_delay)
 )
     t = Observable(length(obs_seq[]) - 1)
 
@@ -428,16 +420,16 @@ function play_as_agent_gui(
     egocentric_obs_pts = @lift(
         map(Point2, collect(zip(points_from_raytracing(
             0, 0, # egocentric coordinates
-            $obs_seq[$t + 1];
+            $obs_seq[$t+1];
             angles=ray_angles,
             is_continuous=true
         )...)))
     )
 
     if show_lines_to_walls
-        linespec = @lift( collect(Iterators.flatten(
+        linespec = @lift(collect(Iterators.flatten(
             (Point2(0, 0), pt, Point2(NaN, NaN)) for pt in $egocentric_obs_pts
-        )) )
+        )))
         Makie.lines!(ax, linespec, linewidth=0.5)
     end
     Makie.scatter!(ax, egocentric_obs_pts)
@@ -452,8 +444,9 @@ function play_as_agent_gui(
         str = "time: $t | max time simulated to: $(length(obs_seq) - 1)"
         isempty(additional_text) ? str : (str * "\n" * additional_text)
     end)
-    l.tellheight=true; l.tellwidth=false
-    
+    l.tellheight = true
+    l.tellwidth = false
+
     Makie.xlims!(ax, (-worldsize, worldsize))
     Makie.ylims!(ax, (-worldsize, worldsize))
 
@@ -465,18 +458,18 @@ function play_as_agent_gui(
     register_keyboard_listeners(f;
         keys=WASDE_TG_08_SPACE_KEYS(),
         callbacks=(;
-            up = () -> take_action_and_increment_time(:up),
-            down = () -> take_action_and_increment_time(:down),
-            left = () -> take_action_and_increment_time(:left),
-            right = () -> take_action_and_increment_time(:right),
-            stay = () -> take_action_and_increment_time(:stay),
+            up=() -> take_action_and_increment_time(:up),
+            down=() -> take_action_and_increment_time(:down),
+            left=() -> take_action_and_increment_time(:left),
+            right=() -> take_action_and_increment_time(:right),
+            stay=() -> take_action_and_increment_time(:stay),
             timeup, timedown,
-            animate_from_0 = animate_from_zero,
-            save = () -> save_fn(actions),
-            pause_or_resume = pause_or_resume
+            animate_from_0=animate_from_zero,
+            save=() -> save_fn(actions),
+            pause_or_resume=pause_or_resume
         )
     )
-    
+
 
     if close_on_hitwall && !isnothing(close_window)
         Makie.on(did_hitwall_observable) do hitwall
@@ -532,12 +525,8 @@ end
 for the belief state to be displayed.
 """
 function display_pf_localization!(ax::Makie.Axis, particles)
-    colors = @lift([Makie.RGBA(0, 1, 0, sqrt(w)) for w in $particles[1]])
-    boxes = @lift([ # A rectangle for each particle
-        Rect2(Vec2([x .- 1, y .- 1]), Vec2([1.0, 1.0]))
-        for (x, y) in $particles[2]
-    ])
-    Makie.poly!(ax, boxes; color=colors)
+    colors = @lift([Makie.RGBA(0, 1, 0, w) for w in $particles[1]])
+    Makie.scatter!(ax, @lift(map(Point2, $particles[2])), color=colors)
 end
 
 DEFAULT_SQUARE_COLORS = Dict(
@@ -591,7 +580,7 @@ function time_heatmap(
             i == 1 && continue
             if use_times
                 if i < length(times)
-                    delta_t = (times[i + 1] - times[i]).value
+                    delta_t = (times[i+1] - times[i]).value
                     delta_t = min(delta_t, clip_ms)
                     heatmap[Int(floor(x + 0.5)), Int(floor(y + 0.5))] += delta_t
                 end
