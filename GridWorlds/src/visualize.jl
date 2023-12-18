@@ -605,26 +605,13 @@ function time_heatmap(
 end
 
 ## Visualizations for internal maps
-function display_pf_state(t::Makie.Observable, particles;
-    plot_specs=DEFAULT_PLOT_SPECS(), size=(800, 800),
-)
-    figure = Makie.Figure(; size)
-    for (i, plot) in enumerate(plot_specs)
-        ax = Makie.Axis(figure[1, i], aspect=Makie.DataAspect())
-        Makie.hidedecorations!(ax)
-    end
-
-    display_pf_state!(figure, t, particles; plot_specs)
-    figure
-end
-
-
 function display_pf_state!(f::Makie.Figure, t::Makie.Observable, particles;
     plot_specs=DEFAULT_PLOT_SPECS()
 )
     for (i, plot) in enumerate(plot_specs)
         if plot.show_map
-            ax = Makie.contents(f[1, i])[1]
+            ax = Makie.Axis(f[1, i+length(plot_specs)], aspect=Makie.DataAspect())
+            Makie.hidedecorations!(ax)
             display_pf_state!(ax, t, particles)
         end
     end

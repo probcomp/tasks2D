@@ -2,7 +2,7 @@ import GenPOMDPs
 import GenParticleFilters
 import Gen
 
-function pf(pomdp, params, pf_initialize_params, pf_update_params, init_constraints::ChoiceMap, pre_update=(_ -> ()),
+function pf(pomdp, params, pf_initialize_params, pf_update_params, init_constraints::ChoiceMap=choicemap(), pre_update=(_ -> ()),
     post_update=(_ -> ()))
     return (
         pf_initializer(pomdp, params, pf_initialize_params, init_constraints),
