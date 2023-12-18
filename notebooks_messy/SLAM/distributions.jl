@@ -5,6 +5,17 @@ Some Gen distributions used in the SLAM tasks.
 using Gen
 import GridWorlds
 
+struct MappedUniform <: Gen.Distribution{Any} end
+Gen.random(::MappedUniform, mins, maxs) = [Gen.uniform(min, max) for (min, max) in zip(mins, maxs)]
+function Gen.logpdf(::MappedUniform, v, mins, maxs)
+    if length(v) != length(mins) || length(v) != length(maxs)
+        return -Inf
+    end
+    return sum(logpdf(Gen.uniform, val, min, max) for (val, min, max) in zip(v, mins, maxs); init=0.0)
+end
+mapped_uniform = MappedUniform()
+(::MappedUniform)(args...) = random(mapped_uniform, args...)
+
 struct BernoulliMap <: Gen.Distribution{GridWorlds.GridWorld} end
 
 function Gen.random(::BernoulliMap, width::Int, height::Int, wall_prob::Real)
@@ -33,7 +44,7 @@ function Gen.random(::MixtureMeasurement, is_wall::Vector{Bool}, wall_dists::Vec
     # sample measurements from wall
     measurements[is_wall] = broadcasted_normal(wall_dists, σ_wall)
     # sample measurements from the strange object
-    measurements[.!is_wall] = Utils.mapped_uniform(strang_dists_min, strang_dists_max)
+    measurements[.!is_wall] = mapped_uniform(strang_dists_min, strang_dists_max)
     return measurements
 end
 
@@ -42,7 +53,7 @@ function Gen.logpdf(::MixtureMeasurement, measurements::Vector{Float64}, is_wall
     # logpdf of measurements from wall
     retval += logpdf(broadcasted_normal, measurements[is_wall], wall_dists, σ_wall)
     # logpdf of measurements from the strange object
-    retval += logpdf(Utils.mapped_uniform, measurements[.!is_wall], strang_dists_min, strang_dists_max)
+    retval += logpdf(mapped_uniform, measurements[.!is_wall], strang_dists_min, strang_dists_max)
     return retval
 end
 mixture_measurement = MixtureMeasurement()
