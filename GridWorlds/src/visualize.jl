@@ -632,7 +632,7 @@ function display_pf_state!(ax::Makie.Axis, t, particles)
         squarecolors = @lift(Dict(
             empty => Makie.RGBA(0, 0, 0, 0),
             agent => Makie.RGBA(0, 0, 0, 0),
-            wall => Makie.RGBA(0, 0, 0, sqrt($weight)),
+            wall => Makie.RGBA(0, 0, 0, $weight),
         ))
         gridworldplot!(ax, world; squarecolors)
     end

@@ -58,3 +58,15 @@ function Gen.logpdf(::MixtureMeasurement, measurements::Vector{Float64}, is_wall
 end
 mixture_measurement = MixtureMeasurement()
 (::MixtureMeasurement)(args...) = random(mixture_measurement, args...)
+
+struct ConstantLogPDFTerm <: Gen.Distribution{Any} end
+
+function Gen.random(::ConstantLogPDFTerm, term::Real)
+    return 0.0
+end
+
+function Gen.logpdf(::ConstantLogPDFTerm, x, term::Real)
+    return term
+end
+constant_log_pdf_term = ConstantLogPDFTerm()
+(::ConstantLogPDFTerm)(args...) = random(constant_log_pdf_term, args...)
