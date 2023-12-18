@@ -68,21 +68,34 @@ function get_pf(pomdp, t_to_params, num_particles, initial_constraints=choicemap
 end
 
 # SMCP3 forward proposal
-GenSMCP3.@kernel function _forward_proposal(prev_trace, is_initial_step, t_to_params, new_action, new_obs, constraints=choicemap())
+GenSMCP3.@kernel function _forward_proposal(prev_trace, is_initial_step, t_to_params, new_action, new_obs, init_constraints=choicemap())
     if is_initial_step
         t = 0
         # sample initial position using prior distribution
-        trace, _ = generate(uniform_agent_pos, (T_TO_PARAMS_INTRO,), constraints)
-        change_chp = get_choices(trace)
+        trace, _ = generate(uniform_agent_pos, (T_TO_PARAMS_INTRO,), init_constraints)
     else
         prev_t, _ = get_args(prev_trace)
         t = prev_t + 1
 
         last_state = prev_trace[GenPOMDPs.state_addr(prev_t)]
         # sample initial position using prior distribution
-        trace, _ = generate(motion_model, (last_state, new_action, T_TO_PARAMS_INTRO,), constraints)
-        change_chp = get_choices(trace)
+        trace, _ = generate(motion_model, (last_state, new_action, T_TO_PARAMS_INTRO,))
     end
+    change_chp = choicemap(get_choices(trace))
+
+    # redraw map where ray hit wall
+    state = get_retval(trace)
+    world = state.world
+    obs_points = GridWorlds.points_from_raytracing(state.pos..., new_obs; is_continuous=true)
+    for (_x, _y) in obs_points
+        x_op = state.pos[1] > _x ? ceil : floor
+        y_op = state.pos[2] > _y ? ceil : floor
+        x = clamp(x_op(Int, _x), 1, world.size[1])
+        y = clamp(y_op(Int, _y), 1, world.size[2])
+        world = GridWorlds.replace(world, (x, y), GridWorlds.wall)
+    end
+
+    change_chp[:world] = world
 
     return (
         GenPOMDPs.nest_choicemap(change_chp, GenPOMDPs.state_addr(t)),
@@ -96,14 +109,16 @@ GenSMCP3.@kernel function _backward_proposal(trace, is_initial_step)
     new_action = t > 0 ? actions[t] : nothing
     t_prev = t - 1
 
-    fwd_ch = choicemap()
-    state = trace[GenPOMDPs.state_addr(t)]
-    fwd_ch[:pos] = state.pos
-
     if is_initial_step
-        for field in [:world, :cell, :x, :y]
-            fwd_ch[field] = trace[GenPOMDPs.state_addr(0, field)]
-        end
+        var_names = [:world, :cell, :x, :y]
+    else
+        var_names = [:world, :noisy_next_pos]
+    end
+
+
+    fwd_ch = choicemap()
+    for field in var_names
+        fwd_ch[field] = trace[GenPOMDPs.state_addr(t, field)]
     end
 
     return (
