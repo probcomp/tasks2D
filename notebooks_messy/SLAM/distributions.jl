@@ -24,3 +24,26 @@ function Gen.logpdf(::BernoulliMap, w::GridWorlds.GridWorld, width::Int, height:
 end
 bernoulli_map = BernoulliMap()
 (::BernoulliMap)(args...) = random(bernoulli_map, args...)
+
+
+struct MixtureMeasurement <: Gen.Distribution{Vector{Float64}} end
+
+function Gen.random(::MixtureMeasurement, is_wall::Vector{Bool}, wall_dists::Vector{Float64}, σ_wall::Float64, strang_dists_min::Vector{Float64}, strang_dists_max::Vector{Float64})
+    measurements = Vector{Float64}(undef, length(is_wall))
+    # sample measurements from wall
+    measurements[is_wall] = broadcasted_normal(wall_dists, σ_wall)
+    # sample measurements from the strange object
+    measurements[.!is_wall] = Utils.mapped_uniform(strang_dists_min, strang_dists_max)
+    return measurements
+end
+
+function Gen.logpdf(::MixtureMeasurement, measurements::Vector{Float64}, is_wall::Vector{Bool}, wall_dists::Vector{Float64}, σ_wall::Float64, strang_dists_min::Vector{Float64}, strang_dists_max::Vector{Float64})
+    retval = 0.0
+    # logpdf of measurements from wall
+    retval += logpdf(broadcasted_normal, measurements[is_wall], wall_dists, σ_wall)
+    # logpdf of measurements from the strange object
+    retval += logpdf(Utils.mapped_uniform, measurements[.!is_wall], strang_dists_min, strang_dists_max)
+    return retval
+end
+mixture_measurement = MixtureMeasurement()
+(::MixtureMeasurement)(args...) = random(mixture_measurement, args...)

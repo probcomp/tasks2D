@@ -27,7 +27,7 @@ function deserialize_trace_and_viz_actions(filename, pomdp_trajectory_model; arg
     return tr, viz_actions
 end
 
-function serialize_pomdp_trace(filename, trace; args_to_serializeable = identity)
+function serialize_pomdp_trace(filename, trace; args_to_serializeable=identity)
     args = args_to_serializeable(get_args(trace))
     Serialization.serialize(filename, Dict(
         "args" => args,
@@ -35,7 +35,7 @@ function serialize_pomdp_trace(filename, trace; args_to_serializeable = identity
     ))
     println("Trace serialized to $filename.")
 end
-function deserialize_pomdp_trace(filename, pomdp_trajectory_model; args_from_serializeable = identity)
+function deserialize_pomdp_trace(filename, pomdp_trajectory_model; args_from_serializeable=identity)
     s = Serialization.deserialize(filename)
     args = args_from_serializeable(s["args"])
     choices = serializable_to_choicemap(s["choices"])
@@ -64,13 +64,13 @@ function serializable_to_choicemap(s)
 end
 
 ### Dists ###
-struct MappedUniform <: Gen.Distribution{Any}; end
+struct MappedUniform <: Gen.Distribution{Any} end
 Gen.random(::MappedUniform, mins, maxs) = [Gen.uniform(min, max) for (min, max) in zip(mins, maxs)]
 function Gen.logpdf(::MappedUniform, v, mins, maxs)
     if length(v) != length(mins) || length(v) != length(maxs)
         return -Inf
     end
-    return sum(logpdf(Gen.uniform, val, min, max) for (val, min, max) in zip(v, mins, maxs))
+    return sum(logpdf(Gen.uniform, val, min, max) for (val, min, max) in zip(v, mins, maxs); init=0.0)
 end
 mapped_uniform = MappedUniform()
 (::MappedUniform)(args...) = random(mapped_uniform, args...)
