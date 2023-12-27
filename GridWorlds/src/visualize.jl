@@ -135,6 +135,59 @@ function visualize_grid_with_interactive_agent(w; world_updater = move_agent, kw
     f
 end
 
+function mapviz_stillframe(
+    gridworld, pos, obs;
+    fig_xsize=800,
+    display_agent_as_cell=false,
+    show_obs=true,
+    show_lines_to_walls=true,
+    ray_angles=nothing,
+    show_map=false,
+    show_pos=true
+)
+    xsize, ysize = gridworld.size
+    fig_ysize = Int(floor(fig_xsize * ysize / xsize))
+
+    f = Makie.Figure(;size=(fig_xsize, fig_ysize))
+
+    ax = Makie.Axis(f[1, 1], aspect=Makie.DataAspect())
+    Makie.hidedecorations!(ax)
+
+    if show_map
+        gridworldplot!(ax, gridworld; squarecolors=DEFAULT_SQUARE_COLORS)
+    end
+
+    if show_obs
+        obs_pts = map(Point2, collect(zip(points_from_raytracing(
+                pos..., # agentx, agenty
+                obs;      # observation points
+                angles=ray_angles,
+                is_continuous=!display_agent_as_cell
+            )...)))
+
+        if show_lines_to_walls
+            linespec = collect(Iterators.flatten(
+                (
+                    Point2(pos...),
+                    pt,
+                    Point2(NaN, NaN)
+                ) for pt in obs_pts
+            ))
+            Makie.lines!(ax, linespec, linewidth=0.5)
+        end
+    
+        Makie.scatter!(ax, obs_pts)
+    end
+
+    if show_pos && !display_agent_as_cell
+        # If the agent is not displayed as a grid cell, we should
+        # display it as a point in continuous space.
+        Makie.scatter!(ax, [Point2(pos...)], color=:red)
+    end
+
+    return f
+end
+
 DEFAULT_PLOT_SPECS() = [ (; show_map=true, show_agent=true, show_obs=true) ]
 """
 Visualize a GridWorld, and ray-trace point observations.
@@ -568,18 +621,25 @@ function time_heatmap(
     gridmap,
     paths, # List of (x, y) positions
     timess; # List of times
-    size=(800, 800),
+    fig_xsize=800,
     clip_ms=5_000, # Clip time spent at a square to this many ms
     use_times=true, # otherwise, plot based on frequencies
     title="",
     do_avg=true,
     n_to_avg_over=length(paths),
-    times_colorrange=(0, 5_000),
-    steps_colorrange=(0, 6)
+    times_colorrange=(0, 3),
+    steps_colorrange=(0, 4),
+    showticks=false
 )
-    f = Makie.Figure(; size)
+    xsize, ysize = gridmap.size
+    fig_ysize = Int(floor(fig_xsize * ysize / xsize))
+    size = (fig_xsize, fig_ysize)
+    f = Makie.Figure(; size, fontsize=20)
     ax = Makie.Axis(f[1, 1]; aspect=Makie.DataAspect(), title)
-    Makie.hidedecorations!(ax)
+    
+    if !showticks
+        Makie.hidedecorations!(ax)
+    end
 
     xsize, ysize = Base.size(gridmap)
     heatmap = zeros(xsize, ysize)
@@ -591,6 +651,7 @@ function time_heatmap(
                 if i < length(times)
                     delta_t = (times[i + 1] - times[i]).value
                     delta_t = min(delta_t, clip_ms)
+                    delta_t = delta_t/1000 # seconds
                     heatmap[Int(floor(x + 0.5)), Int(floor(y + 0.5))] += delta_t
                 end
             else
@@ -608,7 +669,7 @@ function time_heatmap(
 
     gridworldplot!(ax, gridmap; squarecolors=DEFAULT_SQUARE_COLORS)
 
-    Makie.Colorbar(f[1, 2], hm, label=(use_times ? "Time spent at square (ms)" : "# Steps spent in square"))
+    Makie.Colorbar(f[1, 2], hm, label=(use_times ? "Time spent at square (s)" : "# Steps spent in square"))
 
     return f
 end
