@@ -3,8 +3,13 @@
 ### GridWorld Interface ### 
 ###########################
 
-"""Value which can occupy a cell in a gridworld."""
-@enum GridCell empty wall agent
+"""
+Value which can occupy a cell in a gridworld.
+
+A `strange` cell causes strange behavior from
+the observation model.
+"""
+@enum GridCell empty wall strange agent
 
 """A world state for a 2D Grid environment."""
 abstract type GridWorld end
@@ -22,6 +27,16 @@ replace(::GridWorld, (x, y), cell) = error("Not implemented.")
 ###########################
 ### GridWorld Functions ###
 ###########################
+
+function Base.:(==)(a::GridWorld, b::GridWorld)
+    return (
+        keys(a) == keys(b) &&
+        all(a[i] == b[i] for i in keys(a))
+    )
+end
+function Base.hash(w::GridWorld, h::UInt)
+    return hash((keys(w), [w[i] for i in keys(w)]), h)
+end
 
 Base.keys(w::GridWorld) = CartesianIndices(size(w))
 Base.getindex(w::GridWorld, i::CartesianIndex) = w[i.I...]

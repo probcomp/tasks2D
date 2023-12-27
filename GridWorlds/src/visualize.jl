@@ -8,17 +8,18 @@ module Viz
 import Makie
 using Makie: Vec2, Point2, Rect2, @lift, lift, Observable
 using ..GridWorlds: GridWorld, place_agent, move_agent, points_from_raytracing
-using ..GridWorlds: empty, wall, agent
+using ..GridWorlds: empty, wall, agent, strange
 
 export gridworldplot, visualize_grid, visualize_interactive_grid, interactive_gui, display_pf_localization!
 
 """Makie plotting recipe for plotting a GridWorld"""
 Makie.@recipe(GridWorldPlot) do scene
     Makie.Attributes(
-        squarecolors = Dict(
+        squarecolors=Dict(
             empty => :white,
+            agent => :red,
             wall => :black,
-            agent => :red
+            strange => :purple
         )
     )
 end
@@ -36,8 +37,8 @@ end
 """
 Visualize a GridWorld.
 """
-function visualize_grid(w; resolution=(400, 400), kwargs...)
-    f = Makie.Figure(;resolution)
+function visualize_grid(w; size=(400, 400), kwargs...)
+    f = Makie.Figure(;size)
     ax = Makie.Axis(f[1, 1], aspect=Makie.DataAspect())
     Makie.hidedecorations!(ax)
     gridworldplot!(ax, w; kwargs...)
@@ -66,6 +67,24 @@ T -> Increment time; G -> Decrement time
 WASDE_TG_KEYS() = (;
     timeup = [:t], timedown = [:g],
     WASDE_KEYS()...
+)
+
+"""
+WASDE, TG as above
+0 = animate from time 0
+8 = save current trace
+"""
+WASDE_TG_08_KEYS() = (;
+    WASDE_TG_KEYS()...,
+    animate_from_0 = [:0, :m],
+    save = [:8, :n]
+)
+
+WASDE_TG_08_SPACE_KEYS() = (;
+    WASDE_TG_KEYS()...,
+    animate_from_0 = [:0, :m],
+    save = [:8, :n],
+    pause_or_resume = [Makie.Keyboard.space]
 )
 
 ### Register keyboard listeners ###
@@ -116,6 +135,59 @@ function visualize_grid_with_interactive_agent(w; world_updater = move_agent, kw
     f
 end
 
+function mapviz_stillframe(
+    gridworld, pos, obs;
+    fig_xsize=800,
+    display_agent_as_cell=false,
+    show_obs=true,
+    show_lines_to_walls=true,
+    ray_angles=nothing,
+    show_map=false,
+    show_pos=true
+)
+    xsize, ysize = gridworld.size
+    fig_ysize = Int(floor(fig_xsize * ysize / xsize))
+
+    f = Makie.Figure(;size=(fig_xsize, fig_ysize))
+
+    ax = Makie.Axis(f[1, 1], aspect=Makie.DataAspect())
+    Makie.hidedecorations!(ax)
+
+    if show_map
+        gridworldplot!(ax, gridworld; squarecolors=DEFAULT_SQUARE_COLORS)
+    end
+
+    if show_obs
+        obs_pts = map(Point2, collect(zip(points_from_raytracing(
+                pos..., # agentx, agenty
+                obs;      # observation points
+                angles=ray_angles,
+                is_continuous=!display_agent_as_cell
+            )...)))
+
+        if show_lines_to_walls
+            linespec = collect(Iterators.flatten(
+                (
+                    Point2(pos...),
+                    pt,
+                    Point2(NaN, NaN)
+                ) for pt in obs_pts
+            ))
+            Makie.lines!(ax, linespec, linewidth=0.5)
+        end
+    
+        Makie.scatter!(ax, obs_pts)
+    end
+
+    if show_pos && !display_agent_as_cell
+        # If the agent is not displayed as a grid cell, we should
+        # display it as a point in continuous space.
+        Makie.scatter!(ax, [Point2(pos...)], color=:red)
+    end
+
+    return f
+end
+
 DEFAULT_PLOT_SPECS() = [ (; show_map=true, show_agent=true, show_obs=true) ]
 """
 Visualize a GridWorld, and ray-trace point observations.
@@ -130,24 +202,44 @@ Map T/G to incrementing/decrementing the displayed time.
     each specification is a named tuple of booleans (show_map, show_agent, show_obs).
 """
 function interactive_gui(
-    gridmap::GridWorld,
+    t_to_gridmap,
     pos_obs_seq, # Observable of (pos_sequence, obs_sequence)
+                 # where each obs is a list of distances
     take_action; # Callback function.  Accepts an action as input, and triggers an update to the pos_obs_seq
     plot_specs = DEFAULT_PLOT_SPECS(), # Specifications for a sequence of horizontally displayed plots
-    resolution=(800, 800),
+    size=(800, 800),
     additional_text="",
+
+    # If this is true, the agent is displayed as a discrete square
+    # in the map, rather than a continuous position.
+    # Its coordinates are discrete grid coordinates, not continuous coordinates.
+    display_agent_as_cell=false,
+
+    show_lines_to_walls=false,
+
+    ray_angles=nothing, # Defaults to LinRange(-π/2, 3π/2, num_angles)
+    save_fn = (viz_actions -> nothing),
+    framerate=2,
+    close_on_hitwall=false,
+    did_hitwall_observable=nothing,
+    close_window=nothing,
+
+    timing_args=nothing # (action_times_observable, speedup_factor, max_delay)
 )
     t = Observable(length(pos_obs_seq[][1]) - 1)
+    actions = []
 
     # Functions for interactivity
     function timeup()
         if t[] < length(pos_obs_seq[][1]) - 1
             t[] = t[] + 1
+            push!(actions, (:timeup, t[]))
         end
     end
     function timedown()
         if t[] > 0
             t[] = t[] - 1
+            push!(actions, (:timedown, t[]))
         end
     end
     function take_action_and_increment_time(a)
@@ -161,19 +253,26 @@ function interactive_gui(
         end
     end
 
-    # GridWorld, with agent displayed
-    w = @lift(place_agent(gridmap, $pos_obs_seq[1][$t + 1]))
+    gridmap = @lift(t_to_gridmap($t))
+    if display_agent_as_cell
+        # GridWorld, with agent displayed
+        w = @lift(place_agent($gridmap, $pos_obs_seq[1][$t + 1]))
+    else
+        w = gridmap
+    end
 
     # Points corresponding to the observed distances
     obs_pts = @lift(
         map(Point2, collect(zip(points_from_raytracing(
             ($pos_obs_seq[1][$t + 1])..., # agentx, agenty
-            $pos_obs_seq[2][$t + 1]      # observation points
+            $pos_obs_seq[2][$t + 1];      # observation points
+            angles=ray_angles,
+            is_continuous=!display_agent_as_cell
         )...)))
     )
     
     ### Make plots ###
-    f = Makie.Figure(;resolution)
+    f = Makie.Figure(;size)
 
     for (i, plot) in enumerate(plot_specs)
         ax = Makie.Axis(f[1, i], aspect=Makie.DataAspect())
@@ -182,11 +281,27 @@ function interactive_gui(
         squarecolors=Dict(
             empty => :white,
             agent => plot.show_agent ? :red : :white,
-            wall => plot.show_map ? :black : :white
+            wall => plot.show_map ? :black : :white,
+            strange => plot.show_map ? :purple : :white
         )
         gridworldplot!(ax, w; squarecolors)
 
+        if !display_agent_as_cell
+            # If the agent is not displayed as a grid cell, we should
+            # display it as a point in continuous space.
+            Makie.scatter!(ax, @lift([Point2($pos_obs_seq[1][$t + 1]...)]), color=:red)
+        end
+
         if plot.show_obs
+            if show_lines_to_walls
+                linespec = @lift( collect(Iterators.flatten(
+                    (Point2($pos_obs_seq[1][$t + 1]...),
+                    pt,
+                    Point2(NaN, NaN)) for pt in $obs_pts
+                )) )
+                Makie.lines!(ax, linespec, linewidth=0.5)
+            end
+        
             Makie.scatter!(ax, obs_pts)
         end
     end
@@ -199,20 +314,246 @@ function interactive_gui(
     l.tellheight=true; l.tellwidth=false
     
     ### Register event listeners ###
+    # animate_from_zero = _animate_from_zero(t, () -> length(pos_obs_seq[][1]) - 1; framerate)
+    (animate_from_zero, pause_or_resume) = _get_animation_fns(
+        t, () -> length(pos_obs_seq[][1]) - 1, actions;
+        framerate, timing_args
+    )
     register_keyboard_listeners(f;
-        keys=WASDE_TG_KEYS(),
+        keys=WASDE_TG_08_SPACE_KEYS(),
         callbacks=(;
             up = () -> take_action_and_increment_time(:up),
             down = () -> take_action_and_increment_time(:down),
             left = () -> take_action_and_increment_time(:left),
             right = () -> take_action_and_increment_time(:right),
             stay = () -> take_action_and_increment_time(:stay),
-            timeup, timedown
+            timeup, timedown,
+            animate_from_0 = animate_from_zero,
+            save = () -> save_fn(actions),
+            pause_or_resume = pause_or_resume
         )
     )
 
-    return (f, t)
+    if close_on_hitwall && !isnothing(close_window)
+        Makie.on(did_hitwall_observable) do hitwall
+            if hitwall
+                # save_fn(actions) # No need for this now; window closing will trigger this
+                close_window(f)
+            end
+        end
+    end
+
+    # Save whenever the window closes.
+    closed = Ref(false)
+    Makie.on(Makie.events(f).window_open) do isopen
+        if !closed[] && !isopen
+            closed[] = true
+            save_fn(actions)
+        elseif isopen
+            closed[] = false
+        end
+    end
+
+    # Actions is a vector which will be populated with pairs (action, time)
+    # for actions in [timeup, timedown, pause, resume]
+    # to track how a user interacts with the visualization.
+    return (f, t, actions)
 end
+
+function _get_animation_fns(t_observable, get_current_maxtime, actions;
+    framerate=2,
+    timing_args=nothing
+)
+    is_paused = Ref(false)
+    function initialize_animate(starttime)
+        is_paused[] = false
+        @async for t = starttime:get_current_maxtime()
+            if is_paused[]
+                break;
+            else
+                t_observable[] = t
+
+                if isnothing(timing_args)
+                    sleep(1/framerate)
+                else
+                    (action_times_observable, speedup_factor, max_delay) = timing_args
+                    if 1 < t <= length(action_times_observable[])
+                        delta_ms = (action_times_observable[][t] - action_times_observable[][t - 1]).value
+                        delta_s = delta_ms / 1000
+                        waittime_s = min(delta_s/speedup_factor, max_delay)
+                        sleep(waittime_s)
+                    end
+                end
+            end
+        end
+    end
+    function animate_from_zero()
+        push!(actions, (:animate_from_zero, 0))
+        initialize_animate(0)
+    end
+    function resume()
+        push!(actions, (:resume, t_observable[]))
+        initialize_animate(t_observable[])
+    end
+    function pause()
+        push!(actions, (:pause, t_observable[]))
+        is_paused[] = true
+    end
+    function pause_or_resume()
+        if is_paused[]
+            resume()
+        else
+            pause()
+        end
+    end
+    return (animate_from_zero, pause_or_resume)
+end
+
+function _animate_from_zero(t_observable, get_current_maxtime; framerate=2)
+    """
+    Animate from t=0.
+    """
+    function _do_animate()
+        println("[Animating]")
+        maxT = get_current_maxtime()
+        @async for t = 0:maxT
+            t_observable[] = t
+            sleep(1/framerate)
+        end
+    end
+end
+
+##############################
+### Play as the agent mode ###
+##############################
+
+function play_as_agent_gui(
+    obs_seq, # Observable of obs_sequence
+    take_action;
+    size=(800, 800),
+    additional_text = "",
+    worldsize=20,
+    show_lines_to_walls=false,
+    ray_angles=nothing, # Defaults to LinRange(-π/2, 3π/2, num_angles)
+    save_fn = (viz_actions -> nothing),
+    framerate=2,
+    close_on_hitwall=false,
+    did_hitwall_observable=nothing,
+    close_window=nothing,
+
+    timing_args=nothing # (action_times_observable, speedup_factor, max_delay)
+)
+    t = Observable(length(obs_seq[]) - 1)
+
+    actions = []
+
+    # Functions for interactivity
+    function timeup()
+        if t[] < length(obs_seq[]) - 1
+            t[] = t[] + 1
+            push!(actions, (:timeup, t[]))
+        end
+    end
+    function timedown()
+        if t[] > 0
+            t[] = t[] - 1
+            push!(actions, (:timedown, t[]))
+        end
+    end
+    function take_action_and_increment_time(a)
+        begin
+            # Only take the action if the displayed time
+            # is the farthest time we have simulated to
+            if t[] == length(obs_seq[]) - 1
+                take_action(a)
+                t[] = t[] + 1
+            end
+        end
+    end
+
+    ### Make plot ###
+    f = Makie.Figure(; size)
+    ax = Makie.Axis(f[1, 1], aspect=Makie.DataAspect())
+    Makie.hidedecorations!(ax)
+
+    # Plot obs
+    egocentric_obs_pts = @lift(
+        map(Point2, collect(zip(points_from_raytracing(
+            0, 0, # egocentric coordinates
+            $obs_seq[$t + 1];
+            angles=ray_angles,
+            is_continuous=true
+        )...)))
+    )
+
+    if show_lines_to_walls
+        linespec = @lift( collect(Iterators.flatten(
+            (Point2(0, 0), pt, Point2(NaN, NaN)) for pt in $egocentric_obs_pts
+        )) )
+        Makie.lines!(ax, linespec, linewidth=0.5)
+    end
+    Makie.scatter!(ax, egocentric_obs_pts)
+
+    # Plot agent as circle in the center of the map
+    Makie.scatter!(ax, [0], [0], color=:red)
+
+    # Makie.lines!(ax, Makie.lift(zero_pt_nan, obs_pt_xs), Makie.lift(zero_pt_nan, obs_pt_ys))
+
+    ### Display information ###
+    l = Makie.Label(f[2, :], lift(t, obs_seq) do t, obs_seq
+        str = "time: $t | max time simulated to: $(length(obs_seq) - 1)"
+        isempty(additional_text) ? str : (str * "\n" * additional_text)
+    end)
+    l.tellheight=true; l.tellwidth=false
+    
+    Makie.xlims!(ax, (-worldsize, worldsize))
+    Makie.ylims!(ax, (-worldsize, worldsize))
+
+    ### Register event listeners ###
+    (animate_from_zero, pause_or_resume) = _get_animation_fns(
+        t, () -> length(obs_seq[]) - 1, actions;
+        framerate, timing_args
+    )
+    register_keyboard_listeners(f;
+        keys=WASDE_TG_08_SPACE_KEYS(),
+        callbacks=(;
+            up = () -> take_action_and_increment_time(:up),
+            down = () -> take_action_and_increment_time(:down),
+            left = () -> take_action_and_increment_time(:left),
+            right = () -> take_action_and_increment_time(:right),
+            stay = () -> take_action_and_increment_time(:stay),
+            timeup, timedown,
+            animate_from_0 = animate_from_zero,
+            save = () -> save_fn(actions),
+            pause_or_resume = pause_or_resume
+        )
+    )
+    
+
+    if close_on_hitwall && !isnothing(close_window)
+        Makie.on(did_hitwall_observable) do hitwall
+            if hitwall
+                # save_fn(actions) # No need for this now; window closing will trigger this
+                close_window(f)
+            end
+        end
+    end
+
+    # Save whenever the window closes.
+    closed = Ref(false)
+    Makie.on(Makie.events(f).window_open) do isopen
+        if !closed[] && !isopen
+            closed[] = true
+            save_fn(actions)
+        elseif isopen
+            closed[] = false
+        end
+    end
+
+    return (f, t, actions)
+end
+
+##################
 
 # TODO: Allow the plot_specs to explicitly control where to put PF observations
 function display_pf_localization!(f::Makie.Figure, t::Makie.Observable, particles;
@@ -251,4 +592,85 @@ function display_pf_localization!(ax::Makie.Axis, particles)
     Makie.poly!(ax, boxes; color=colors)
 end
 
+DEFAULT_SQUARE_COLORS = Dict(
+    empty => Makie.RGBA(1, 1, 1, 0),
+    agent => :red,
+    wall => :black,
+    strange => :purple
+)
+function plot_paths(
+    gridmap,
+    paths, # List of sequences of (x, y) positions
+    size=(800, 800)
+)
+    f = Makie.Figure(; size)
+    ax = Makie.Axis(f[1, 1], aspect=Makie.DataAspect())
+    Makie.hidedecorations!(ax)
+    gridworldplot!(ax, gridmap; squarecolors=DEFAULT_SQUARE_COLORS)
+
+    # Plot paths
+    for path in paths
+        path_pts = map(Point2, path)
+        Makie.lines!(ax, path_pts, color=1:length(path))
+    end
+
+    return f
 end
+
+function time_heatmap(
+    gridmap,
+    paths, # List of (x, y) positions
+    timess; # List of times
+    fig_xsize=800,
+    clip_ms=5_000, # Clip time spent at a square to this many ms
+    use_times=true, # otherwise, plot based on frequencies
+    title="",
+    do_avg=true,
+    n_to_avg_over=length(paths),
+    times_colorrange=(0, 3),
+    steps_colorrange=(0, 4),
+    showticks=false
+)
+    xsize, ysize = gridmap.size
+    fig_ysize = Int(floor(fig_xsize * ysize / xsize))
+    size = (fig_xsize, fig_ysize)
+    f = Makie.Figure(; size, fontsize=20)
+    ax = Makie.Axis(f[1, 1]; aspect=Makie.DataAspect(), title)
+    
+    if !showticks
+        Makie.hidedecorations!(ax)
+    end
+
+    xsize, ysize = Base.size(gridmap)
+    heatmap = zeros(xsize, ysize)
+
+    for (path, times) in zip(paths, timess)
+        for (i, (x, y)) in enumerate(path)
+            i == 1 && continue
+            if use_times
+                if i < length(times)
+                    delta_t = (times[i + 1] - times[i]).value
+                    delta_t = min(delta_t, clip_ms)
+                    delta_t = delta_t/1000 # seconds
+                    heatmap[Int(floor(x + 0.5)), Int(floor(y + 0.5))] += delta_t
+                end
+            else
+                heatmap[Int(floor(x + 0.5)), Int(floor(y + 0.5))] += 1
+            end
+        end
+    end
+    if do_avg
+        heatmap /= n_to_avg_over
+    end
+
+    hm = Makie.heatmap!(ax, 0:1.0:(xsize), 0:1.0:(ysize), heatmap, colormap=:tempo,
+        colorrange=(use_times ? times_colorrange : steps_colorrange)
+    )
+
+    gridworldplot!(ax, gridmap; squarecolors=DEFAULT_SQUARE_COLORS)
+
+    Makie.Colorbar(f[1, 2], hm, label=(use_times ? "Time spent at square (s)" : "# Steps spent in square"))
+
+    return f
+end
+end # module
