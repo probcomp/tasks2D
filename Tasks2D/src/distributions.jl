@@ -1,7 +1,7 @@
 """
 Tasks2D.Distributions
 
-Some Gen distributions used in the grid tasks.
+Some Gen distributions used in the 2D tasks.
 """
 module Distributions
 using Gen
