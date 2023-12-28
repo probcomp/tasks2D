@@ -16,9 +16,9 @@ function setup_figure_from_map(gridworld::Observable, fig_xsize; plot_map=true, 
     return f, ax
 end
 
-plot_obs!(ax, pos, obs, args...; kwargs...) = 
-    plot_obs!(ax, Observable(pos), Observable(obs), args...; kwargs...)
-function plot_obs!(ax, pos::Observable, obs::Observable, angles; is_continuous, show_lines_to_walls)
+plot_obs!(ax, pos, obs, angles=nothing; kwargs...) = 
+    plot_obs!(ax, Observable(pos), Observable(obs), angles; kwargs...)
+function plot_obs!(ax, pos::Observable, obs::Observable, angles=nothing; is_continuous, show_lines_to_walls, alpha=1, color=:blue)
     obs_pts = @lift(map(Point2, collect(zip(points_from_raytracing(
         ($pos)..., # agentx, agenty
         ($obs);      # observation points
@@ -34,24 +34,31 @@ function plot_obs!(ax, pos::Observable, obs::Observable, angles; is_continuous, 
                 Point2(NaN, NaN)
             ) for pt in $obs_pts
         )))
-        Makie.lines!(ax, linespec, linewidth=0.5)
+        l = Makie.lines!(ax, linespec; linewidth=0.5, alpha, color)
     end
 
-    Makie.scatter!(ax, obs_pts)
+    sc = Makie.scatter!(ax, obs_pts; alpha, color)
+
+    if show_lines_to_walls
+        return [sc, l]
+    else
+        return sc
+    end
 end
 
-function plot_path!(ax, path; alpha=1., marker=:circle, color=nothing, colormap=:viridis)
-    path_pts = map(Point2, path)
+plot_path!(ax, path; kwargs...) = plot_path!(ax, Observable(path); kwargs...)
+function plot_path!(ax, path::Observable; alpha=Observable(1.), marker=:circle, color=nothing, colormap=:viridis)
+    path_pts = @lift(map(Point2, $path))
     if isnothing(color)
-        color = 1:length(path)
+        color = @lift(1:length($path))
     end
     if colormap isa Array && colormap[1] == :white
-        colorrange=(-length(path), length(path))
+        colorrange=@lift((-length($path), length($path)))
     else
-        colorrange = (1, length(path))
+        colorrange = @lift((1, length($path)))
     end
-    l = Makie.lines!(ax, path_pts; color, alpha, colormap, colorrange)
-    sc = Makie.scatter!(ax, path_pts; color, alpha, marker, colormap, colorrange)
+    l = Makie.lines!(ax, path_pts; color, alpha, colormap) #, colorrange)
+    sc = Makie.scatter!(ax, path_pts; color, alpha, marker, colormap) #, colorrange)
     return [l, sc]
 end
 function logweights_to_alphas(logweights)

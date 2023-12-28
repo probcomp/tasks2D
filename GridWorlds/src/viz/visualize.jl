@@ -92,6 +92,88 @@ function plot_pf_results(
     return f
 end
 
+function pf_result_gif(
+    args...;
+    n_frames,
+    framerate,
+    kwargs...
+)
+    f, fr = animateable_pf_results(args...; kwargs...)
+    gif_filename = Makie.record(f, "__pf_result.gif", 1:n_frames; framerate) do frame
+        fr[] = frame
+    end
+    return gif_filename
+end
+
+function animateable_pf_results(
+    gridmap,
+    fr_to_gt_path, # frame -> List of (x, y) positions
+    fr_to_pf_paths, # frame -> List of sequences of (x, y) positions
+    fr_to_pf_logweights; # frame -> List of sequences of weights
+    fig_xsize=800,
+    fr_to_gt_obs=nothing,
+    fr_to_particle_obss=nothing,
+    show_lines_to_walls=false,
+)
+    f, ax = setup_figure_from_map(gridmap, fig_xsize)
+    fr = Observable(1)
+
+    gt_path = @lift(fr_to_gt_path($fr))
+    pf_paths = @lift(fr_to_pf_paths($fr))
+    pf_logweights = @lift(fr_to_pf_logweights($fr))
+
+    alphas = @lift(logweights_to_alphas($pf_logweights))
+    pf = nothing
+    for i in 1:length(pf_paths[])
+        pf = plot_path!(ax, @lift($pf_paths[i]); alpha=@lift($alphas[i]), colormap=[:white, :green])
+    end
+
+    gt = plot_path!(ax, gt_path; marker=:x, colormap=[:white, :purple])#:seaborn_rocket_gradient)
+
+    gt_obs_viz = nothing
+    if !isnothing(fr_to_gt_obs)
+        gt_obs = @lift(fr_to_gt_obs($fr))
+        gt_obs_viz = plot_obs!(ax, @lift($gt_path[end]), gt_obs; is_continuous=true, show_lines_to_walls)
+    end
+
+    particle_obs_viz = nothing
+    if !isnothing(fr_to_particle_obss)
+        particle_obss = @lift(fr_to_particle_obss($fr))
+        for i in 1:length(particle_obss[])
+            obs = @lift($particle_obss[i])
+            pos = @lift($pf_paths[i][end])
+            alpha = @lift($alphas[i])
+            particle_obs_viz = plot_obs!(ax, pos, obs; is_continuous=true, show_lines_to_walls, alpha, color=:green)
+        end
+    end
+
+    # l = Makie.Legend(
+    #     f[2, 1], [gt, pf], ["Ground Truth Trajectory", "Inferred Trajectory Particles"]
+    # )
+    # ax.tellheight = true
+    # l.tellheight = true
+    # l.tellwidth = true
+
+    Makie.axislegend(
+        ax, [
+            gt,
+            pf,
+            (isnothing(gt_obs_viz) ? () : (gt_obs_viz,))...,
+            (isnothing(particle_obs_viz) ? () : (particle_obs_viz,))...
+        ],
+        [
+            "Ground Truth Trajectory",
+            "Inferred Weighted Particles",
+            (isnothing(gt_obs_viz) ? () : ("Ground Truth Observation",))...,
+            (isnothing(particle_obs_viz) ? () : ("Inferred Particle Observations",))...
+        ],
+        position=:rb
+    )
+
+    return f, fr
+end
+
+
 function time_heatmap(
     gridmap,
     paths, # List of (x, y) positions
