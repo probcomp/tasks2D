@@ -74,7 +74,7 @@ function plot_pf_results(
         pf = plot_path!(ax, path; alpha)
     end
 
-    gt = plot_path!(ax, gt_path; marker=:x, colormap=:viridis)
+    gt = plot_path!(ax, gt_path; marker=:x, colormap=:seaborn_rocket_gradient)
 
     # l = Makie.Legend(
     #     f[2, 1], [gt, pf], ["Ground Truth Trajectory", "Inferred Trajectory Particles"]
