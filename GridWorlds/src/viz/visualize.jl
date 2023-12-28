@@ -71,10 +71,10 @@ function plot_pf_results(
     alphas = logweights_to_alphas(pf_logweights)
     pf = nothing
     for (path, alpha) in zip(pf_paths, alphas)
-        pf = plot_path!(ax, path; alpha)
+        pf = plot_path!(ax, path; alpha, colormap=[:white, :green])
     end
 
-    gt = plot_path!(ax, gt_path; marker=:x, colormap=:seaborn_rocket_gradient)
+    gt = plot_path!(ax, gt_path; marker=:x, colormap=[:white, :purple])#:seaborn_rocket_gradient)
 
     # l = Makie.Legend(
     #     f[2, 1], [gt, pf], ["Ground Truth Trajectory", "Inferred Trajectory Particles"]

@@ -45,8 +45,13 @@ function plot_path!(ax, path; alpha=1., marker=:circle, color=nothing, colormap=
     if isnothing(color)
         color = 1:length(path)
     end
-    l = Makie.lines!(ax, path_pts; color, alpha, colormap)
-    sc = Makie.scatter!(ax, path_pts; color, alpha, marker, colormap)
+    if colormap isa Array && colormap[1] == :white
+        colorrange=(-length(path), length(path))
+    else
+        colorrange = (1, length(path))
+    end
+    l = Makie.lines!(ax, path_pts; color, alpha, colormap, colorrange)
+    sc = Makie.scatter!(ax, path_pts; color, alpha, marker, colormap, colorrange)
     return [l, sc]
 end
 function logweights_to_alphas(logweights)
