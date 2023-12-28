@@ -67,13 +67,14 @@ function plot_pf_results(
     fig_xsize=800
 )
     f, ax = setup_figure_from_map(gridmap, fig_xsize)
-    gt = plot_path!(ax, gt_path; marker=:x, colormap=:viridis)
 
     alphas = logweights_to_alphas(pf_logweights)
     pf = nothing
     for (path, alpha) in zip(pf_paths, alphas)
         pf = plot_path!(ax, path; alpha)
     end
+
+    gt = plot_path!(ax, gt_path; marker=:x, colormap=:viridis)
 
     # l = Makie.Legend(
     #     f[2, 1], [gt, pf], ["Ground Truth Trajectory", "Inferred Trajectory Particles"]
