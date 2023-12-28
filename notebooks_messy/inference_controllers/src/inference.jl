@@ -147,12 +147,14 @@ function default_pf_args(PARAMS; n_particles=1, coarsest_stepsize=0.4)
     center = [avg(_bb[1][1], _bb[2][1]), avg(_bb[1][2], _bb[2][2])]
     Δy = _bb[2][2] - _bb[1][2]
     Δx = _bb[2][1] - _bb[1][1]
-    y_to_x = Δy/Δx
-    step = sqrt(Δx^2 * y_to_x / 400)
-    @assert Δy/step * Δx/step ≈ 400
-    nstepsy = Int(floor(Δy/step))
-    nstepsx = Int(floor(Δx/step));
-    @assert nstepsy*nstepsx<500
+    nstepsy = Int(ceil(Δy/coarsest_stepsize))
+    nstepsx = Int(ceil(Δx/coarsest_stepsize));
+    # y_to_x = Δy/Δx
+    # step = sqrt(Δx^2 * y_to_x / 400)
+    # @assert Δy/step * Δx/step ≈ 400
+    # nstepsy = Int(floor(Δy/step))
+    # nstepsx = Int(floor(Δx/step));
+    # @assert nstepsy*nstepsx<500
 
     # 3 iters of coarse-to-fine
     stepsize = coarsest_stepsize
@@ -168,8 +170,8 @@ function default_pf_args(PARAMS; n_particles=1, coarsest_stepsize=0.4)
     # coarser level to scan over the whole environment (not just the regions
     # where the agent could have stepped in the last timestep)
     t0_grid_args = (;
-        update_grid_args..., tau=1., n_iters=6,
-        init_grid_args = (; k=[nstepsx, nstepsy], r = [step, step]), initial_pos = center,
+        update_grid_args..., tau=1., n_iters=8,
+        init_grid_args = (; k=[nstepsx, nstepsy], r = [stepsize, stepsize]), initial_pos = center,
         scaling_factor=(2/3) # each iteration, the grid size is scaled down by this factor
     )
 
