@@ -742,7 +742,7 @@ uuid = "3955a311-db13-416c-9275-1d80ed98e5e9"
 version = "0.10.0"
 
 [[deps.GridWorlds]]
-deps = ["FileIO", "FunctionalCollections", "Gen", "Makie", "Revise"]
+deps = ["FileIO", "FunctionalCollections", "Gen", "Makie", "Revise", "StatsFuns"]
 path = "../GridWorlds"
 uuid = "c15fd557-8ec5-4bf9-9d87-df57ac477796"
 version = "0.1.0"
