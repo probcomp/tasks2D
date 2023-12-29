@@ -2,3 +2,5 @@
 **/*.gif
 data/HouseExpoPng/
 **/*.txt
+
+.vscode/settings.json
