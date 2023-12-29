@@ -96,9 +96,10 @@ function pf_result_gif(
     args...;
     n_frames,
     framerate,
+    twopanel=false,
     kwargs...
 )
-    f, fr = animateable_pf_results(args...; kwargs...)
+    f, fr = (twopanel ? animateable_pf_results_2panel : animateable_pf_results)(args...; kwargs...)
     gif_filename = Makie.record(f, "__pf_result.gif", 1:n_frames; framerate) do frame
         fr[] = frame
     end
@@ -143,7 +144,7 @@ function animateable_pf_results(
             obs = @lift($particle_obss[i])
             pos = @lift($pf_paths[i][end])
             alpha = @lift($alphas[i])
-            particle_obs_viz = plot_obs!(ax, pos, obs; is_continuous=true, show_lines_to_walls, alpha, color=:green)
+            particle_obs_viz = plot_obs!(ax, pos, obs; is_continuous=true, show_lines_to_walls, alpha, color=:darkolivegreen)
         end
     end
 
@@ -173,6 +174,62 @@ function animateable_pf_results(
     return f, fr
 end
 
+function animateable_pf_results_2panel(
+    gridmap,
+    fr_to_gt_path, # frame -> List of (x, y) positions
+    fr_to_pf_paths, # frame -> List of sequences of (x, y) positions
+    fr_to_pf_logweights; # frame -> List of sequences of weights
+    fig_xsize=800,
+    fr_to_gt_obs=nothing,
+    fr_to_particle_obss=nothing,
+    show_lines_to_walls=false,
+)
+    ## Fig setup
+    !(gridmap isa Observable) && (gridmap = Observable(gridmap))
+    xsize, ysize = gridmap[].size
+    fig_ysize = 12 + Int(floor(1/2 * fig_xsize * ysize / xsize))
+    f = Makie.Figure(;size=(fig_xsize, fig_ysize))
+    ax1 = Makie.Axis(f[1, 1], aspect=Makie.DataAspect(), title="True world state")
+    ax2 = Makie.Axis(f[1, 2], aspect=Makie.DataAspect(), title="Belief state")
+    Makie.hidedecorations!(ax1)
+    Makie.hidedecorations!(ax2)
+    gridworldplot!(ax1, gridmap; squarecolors=DEFAULT_SQUARE_COLORS)
+    gridworldplot!(ax2, gridmap; squarecolors=DEFAULT_SQUARE_COLORS)
+
+    ## Observable
+    fr = Observable(1)
+    gt_path = @lift(fr_to_gt_path($fr))
+    pf_paths = @lift(fr_to_pf_paths($fr))
+    pf_logweights = @lift(fr_to_pf_logweights($fr))
+    alphas = @lift(logweights_to_alphas($pf_logweights))
+
+    ## Plot ax1
+    gt = plot_path!(ax1, gt_path; marker=:x, colormap=[:white, :purple])#:seaborn_rocket_gradient)
+    gt_obs_viz = nothing
+    if !isnothing(fr_to_gt_obs)
+        gt_obs = @lift(fr_to_gt_obs($fr))
+        gt_obs_viz = plot_obs!(ax1, @lift($gt_path[end]), gt_obs; is_continuous=true, show_lines_to_walls)
+    end
+
+    ## Plot ax2
+    pf = nothing
+    for i in 1:length(pf_paths[])
+        pf = plot_path!(ax2, @lift($pf_paths[i]); alpha=@lift($alphas[i]), colormap=[:white, :green])
+    end
+    particle_obs_viz = nothing
+    if !isnothing(fr_to_particle_obss)
+        particle_obss = @lift(fr_to_particle_obss($fr))
+        for i in 1:length(particle_obss[])
+            obs = @lift($particle_obss[i])
+            pos = @lift($pf_paths[i][end])
+            alpha = @lift($alphas[i])
+            particle_obs_viz = plot_obs!(ax2, pos, obs; is_continuous=true, show_lines_to_walls, alpha, color=:darkolivegreen)
+        end
+    end
+
+    ## Return
+    return f, fr
+end
 
 function time_heatmap(
     gridmap,
