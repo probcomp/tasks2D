@@ -184,12 +184,14 @@ function animateable_pf_results_2panel(
     fr_to_gt_obs=nothing,
     fr_to_particle_obss=nothing,
     show_lines_to_walls=false,
-    tail_length=nothing
+    tail_length=nothing,
+    labeltext=nothing,
+    label_fontsize=12
 )
     ## Fig setup
     !(gridmap isa Observable) && (gridmap = Observable(gridmap))
     xsize, ysize = gridmap[].size
-    fig_ysize = 12 + Int(floor(1/2 * fig_xsize * ysize / xsize))
+    fig_ysize = 12 + Int(floor(1/2 * fig_xsize * ysize / xsize)) + (isnothing(labeltext) ? 0 : 30)
     f = Makie.Figure(;size=(fig_xsize, fig_ysize))
     ax1 = Makie.Axis(f[1, 1], aspect=Makie.DataAspect(), title="True world state")
     ax2 = Makie.Axis(f[1, 2], aspect=Makie.DataAspect(), title="Belief state")
@@ -227,6 +229,11 @@ function animateable_pf_results_2panel(
             alpha = @lift($alphas[i])
             particle_obs_viz = plot_obs!(ax2, pos, obs; is_continuous=true, show_lines_to_walls, alpha, color=:darkolivegreen)
         end
+    end
+
+    if !isnothing(labeltext)
+        l = Makie.Label(f[2, :], labeltext, fontsize=label_fontsize)
+        l.tellheight=true
     end
 
     ## Return
