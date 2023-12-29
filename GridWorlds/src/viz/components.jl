@@ -47,18 +47,25 @@ function plot_obs!(ax, pos::Observable, obs::Observable, angles=nothing; is_cont
 end
 
 plot_path!(ax, path; kwargs...) = plot_path!(ax, Observable(path); kwargs...)
-function plot_path!(ax, path::Observable; alpha=Observable(1.), marker=:circle, color=nothing, colormap=:viridis)
+function plot_path!(
+    ax, path::Observable; alpha=Observable(1.), marker=:circle, color=nothing, colormap=:viridis,
+    tail_length=nothing
+)
     path_pts = @lift(map(Point2, $path))
     if isnothing(color)
         color = @lift(1:length($path))
     end
-    if colormap isa Array && colormap[1] == :white
+    if !isnothing(tail_length)
+        # colorrange = @lift((length($path) - tail_length, length($path)))
+        colorrange = (1, tail_length)
+        path_pts = @lift($path_pts[max(1, length($path_pts) - tail_length):end])
+    elseif colormap isa Array && colormap[1] == :white
         colorrange=@lift((-length($path), length($path)))
     else
         colorrange = @lift((1, length($path)))
     end
-    l = Makie.lines!(ax, path_pts; color, alpha, colormap) #, colorrange)
-    sc = Makie.scatter!(ax, path_pts; color, alpha, marker, colormap) #, colorrange)
+    l = Makie.lines!(ax, path_pts; color, alpha, colormap, colorrange)
+    sc = Makie.scatter!(ax, path_pts; color, alpha, marker, colormap, colorrange)
     return [l, sc]
 end
 function logweights_to_alphas(logweights)

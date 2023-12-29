@@ -97,10 +97,11 @@ function pf_result_gif(
     n_frames,
     framerate,
     twopanel=false,
+    filetype="gif",
     kwargs...
 )
     f, fr = (twopanel ? animateable_pf_results_2panel : animateable_pf_results)(args...; kwargs...)
-    gif_filename = Makie.record(f, "__pf_result.gif", 1:n_frames; framerate) do frame
+    gif_filename = Makie.record(f, "__pf_result."*filetype, 1:n_frames; framerate) do frame
         fr[] = frame
     end
     return gif_filename
@@ -183,6 +184,7 @@ function animateable_pf_results_2panel(
     fr_to_gt_obs=nothing,
     fr_to_particle_obss=nothing,
     show_lines_to_walls=false,
+    tail_length=nothing
 )
     ## Fig setup
     !(gridmap isa Observable) && (gridmap = Observable(gridmap))
@@ -204,7 +206,7 @@ function animateable_pf_results_2panel(
     alphas = @lift(logweights_to_alphas($pf_logweights))
 
     ## Plot ax1
-    gt = plot_path!(ax1, gt_path; marker=:x, colormap=[:white, :purple])#:seaborn_rocket_gradient)
+    gt = plot_path!(ax1, gt_path; marker=:x, colormap=[:white, :purple], tail_length)#:seaborn_rocket_gradient)
     gt_obs_viz = nothing
     if !isnothing(fr_to_gt_obs)
         gt_obs = @lift(fr_to_gt_obs($fr))
@@ -214,7 +216,7 @@ function animateable_pf_results_2panel(
     ## Plot ax2
     pf = nothing
     for i in 1:length(pf_paths[])
-        pf = plot_path!(ax2, @lift($pf_paths[i]); alpha=@lift($alphas[i]), colormap=[:white, :green])
+        pf = plot_path!(ax2, @lift($pf_paths[i]); alpha=@lift($alphas[i]), colormap=[:white, :green], tail_length)
     end
     particle_obs_viz = nothing
     if !isnothing(fr_to_particle_obss)
@@ -229,6 +231,108 @@ function animateable_pf_results_2panel(
 
     ## Return
     return f, fr
+end
+
+function interactive_2panel(
+    take_action, # action -> (); triggers a frame update
+    gridmap, # Observable
+    gt_path, # Observable
+    pf_paths, # Observable on particle trajectories
+    pf_logweights; # Observable of [logweights1, logweights2, ..]
+    fig_xsize=800,
+    gt_obs=nothing, # or Observable of [obs1, obs2, ...]
+    particle_obss=nothing, # or Observable of 
+    show_lines_to_walls=false,
+    close_on_hitwall=false,
+    did_hitwall_observable=nothing,
+    close_window=nothing,
+    save_fn = () -> nothing,
+)
+    ## Fig setup
+    !(gridmap isa Observable) && (gridmap = Observable(gridmap))
+    xsize, ysize = gridmap[].size
+    fig_ysize = 12 + Int(floor(fig_xsize * ysize / xsize))
+    f = Makie.Figure(;size=(2 * fig_xsize, fig_ysize))
+    ax1 = Makie.Axis(f[1, 1], aspect=Makie.DataAspect(), title="True world state")
+    ax2 = Makie.Axis(f[1, 2], aspect=Makie.DataAspect(), title="Belief state")
+    Makie.hidedecorations!(ax1)
+    Makie.hidedecorations!(ax2)
+    gridworldplot!(ax1, gridmap; squarecolors=DEFAULT_SQUARE_COLORS)
+    gridworldplot!(ax2, gridmap; squarecolors=DEFAULT_SQUARE_COLORS)
+
+    ## Observables
+    t = @lift(length($gt_path) - 1)
+    alphas = @lift(logweights_to_alphas($pf_logweights))
+
+    ## Interactivity
+    function take_action_and_increment_time(a)
+        begin
+            # Only take the action if the displayed time
+            # is the farthest time we have simulated to
+            if t[] == length(gt_path[]) - 1
+                take_action(a)
+            end
+        end
+    end
+    register_keyboard_listeners(f;
+        keys=WASDE_TG_08_SPACE_KEYS(),
+        callbacks=(;
+            up = () -> take_action_and_increment_time(:up),
+            down = () -> take_action_and_increment_time(:down),
+            left = () -> take_action_and_increment_time(:left),
+            right = () -> take_action_and_increment_time(:right),
+            stay = () -> take_action_and_increment_time(:stay),
+            timeup = (() -> nothing), timedown = (() -> nothing),
+            animate_from_0 = (() -> nothing),
+            save = () -> save_fn(),
+            pause_or_resume = (() -> nothing),
+        )
+    )
+
+    if close_on_hitwall && !isnothing(close_window)
+        Makie.on(did_hitwall_observable) do hitwall
+            if hitwall
+                # save_fn(actions) # No need for this now; window closing will trigger this
+                close_window(f)
+            end
+        end
+    end
+
+    # Save whenever the window closes.
+    closed = Ref(false)
+    Makie.on(Makie.events(f).window_open) do isopen
+        if !closed[] && !isopen
+            closed[] = true
+            save_fn()
+        elseif isopen
+            closed[] = false
+        end
+    end
+
+    ## Plot ax1
+    gt = plot_path!(ax1, gt_path; marker=:x, colormap=[:white, :purple])#:seaborn_rocket_gradient)
+    gt_obs_viz = nothing
+    if !isnothing(gt_obs)
+        gt_obs_viz = plot_obs!(ax1, @lift($gt_path[end]), gt_obs; is_continuous=true, show_lines_to_walls)
+    end
+
+    ## Plot ax2
+    pf = nothing
+    for i in 1:length(pf_paths[])
+        pf = plot_path!(ax2, @lift($pf_paths[i]); alpha=@lift($alphas[i]), colormap=[:white, :green])
+    end
+    particle_obs_viz = nothing
+    if !isnothing(particle_obss)
+        for i in 1:length(particle_obss[])
+            obs = @lift($particle_obss[i])
+            pos = @lift($pf_paths[i][end])
+            alpha = @lift($alphas[i])
+            particle_obs_viz = plot_obs!(ax2, pos, obs; is_continuous=true, show_lines_to_walls, alpha, color=:darkolivegreen)
+        end
+    end
+
+    ## Return
+    return f, t
 end
 
 function time_heatmap(
