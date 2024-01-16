@@ -125,6 +125,17 @@ function eval_pose_vectors(
     
     return log_ps, vs[:]
 end;
+function eval_pose_vectors(
+    vs::Array{Vector{Float64}},
+    x::Vector{Vector{Float64}}, 
+    segs,
+    sensor_args;
+    sorted=false, fov, num_a
+)
+    a = sensor_args    
+    w,  s_noise, outlier, outlier_vol, zmax = a.w, a.s_noise, a.outlier, a.outlier_vol, a.zmax
+    return eval_pose_vectors(vs, x, segs, w, s_noise, outlier, outlier_vol, zmax; sorted=sorted, fov=fov, num_a=num_a)
+end
 
 """
     normalize_exp(x)
@@ -239,7 +250,8 @@ raise_probs(p, vmin) = (1 - vmin*length(p))*p .+  vmin
 #     @write(tr[add_addr_prefix(t_chain+1,:pose => :hd)], hd, :continuous)
 # end
 
-grid_schedule(grid_args, i) = (k=grid_args.k, r=grid_args.r/2^(i-1)) 
+grid_schedule(grid_args, scaling_factor, i) = (k=grid_args.k, r=grid_args.r*scaling_factor^(i-1))
+grid_schedule(grid_args, i) = grid_schedule(grid_args, 1/2, i)
 
 # grid_args = (
 #     k = [3,3,3],

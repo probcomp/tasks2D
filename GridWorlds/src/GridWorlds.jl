@@ -20,6 +20,6 @@ include("maps.jl")
 export load_custom_map, load_houseexpo_gridworld
 
 # Gridworld visualizations
-include("visualize.jl")
+include("viz/visualize.jl")
 
 end # module GridWorlds
