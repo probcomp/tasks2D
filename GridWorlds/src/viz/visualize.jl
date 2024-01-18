@@ -96,15 +96,57 @@ function pf_result_gif(
     args...;
     n_frames,
     framerate,
-    twopanel=false,
-    filetype="gif",
+    n_panels=1, # 1 -> inference + gt overlaid; 2 -> separate; 3 -> separate, plus overlaid
+    filetypes=["gif"],
+    filename="__pf_result",
     kwargs...
 )
-    f, fr = (twopanel ? animateable_pf_results_2panel : animateable_pf_results)(args...; kwargs...)
-    gif_filename = Makie.record(f, "__pf_result."*filetype, 1:n_frames; framerate) do frame
-        fr[] = frame
+    # get_figure = n_panels == 1 ? animateable_pf_results ? n_panels == 2 ? animateable_pf_results_2panel : animateable_pf_results_3panel
+    f, fr = animateable_pf_results(args...; n_panels, kwargs...)
+    gif_filename = nothing
+    for filetype in filetypes
+        n = Makie.record(f, filename*"."*filetype, 1:n_frames; framerate) do frame
+            fr[] = frame
+        end
+        if filetype == "gif"
+            gif_filename = n
+        end
     end
     return gif_filename
+end
+
+# Returns `f, axes_for_inference_result, axes_for_gt`
+function setup_animateable_pf_result_figure(gridmap, grid_xsize, labeltext, n_panels)
+    !(gridmap isa Observable) && (gridmap = Observable(gridmap))
+    if n_panels == 1
+        f, ax = setup_figure_from_map(gridmap, grid_xsize)
+        return f, (ax,), ()
+    elseif n_panels == 2
+        xsize, ysize = gridmap[].size
+        fig_ysize = 12 + Int(floor(grid_xsize * ysize / xsize)) + (isnothing(labeltext) ? 0 : 30)
+        f = Makie.Figure(;size=(2 * grid_xsize, fig_ysize))
+        ax1 = Makie.Axis(f[1, 1], aspect=Makie.DataAspect(), title="True world state")
+        ax2 = Makie.Axis(f[1, 2], aspect=Makie.DataAspect(), title="Belief state")
+        Makie.hidedecorations!(ax1)
+        Makie.hidedecorations!(ax2)
+        gridworldplot!(ax1, gridmap; squarecolors=DEFAULT_SQUARE_COLORS)
+        gridworldplot!(ax2, gridmap; squarecolors=DEFAULT_SQUARE_COLORS)
+        return f, (ax2,), (ax1,)
+    elseif n_panels == 3
+        xsize, ysize = gridmap[].size
+        fig_ysize = 12 + Int(floor(grid_xsize * ysize / xsize)) + (isnothing(labeltext) ? 0 : 30)
+        f = Makie.Figure(;size=(2 * grid_xsize, 2 * fig_ysize))
+        ax1 = Makie.Axis(f[1, 1], aspect=Makie.DataAspect(), title="True world state")
+        ax2 = Makie.Axis(f[1, 2], aspect=Makie.DataAspect(), title="Belief state")
+        ax3 = Makie.Axis(f[2, 2], aspect=Makie.DataAspect(), title="True world state + belief state overlay")
+        Makie.hidedecorations!(ax1)
+        Makie.hidedecorations!(ax2)
+        Makie.hidedecorations!(ax3)
+        gridworldplot!(ax1, gridmap; squarecolors=DEFAULT_SQUARE_COLORS)
+        gridworldplot!(ax2, gridmap; squarecolors=DEFAULT_SQUARE_COLORS)
+        gridworldplot!(ax3, gridmap; squarecolors=DEFAULT_SQUARE_COLORS)
+        return f, (ax2, ax3), (ax1, ax3)
+    end
 end
 
 function animateable_pf_results(
@@ -116,8 +158,12 @@ function animateable_pf_results(
     fr_to_gt_obs=nothing,
     fr_to_particle_obss=nothing,
     show_lines_to_walls=false,
+    n_panels=1,
+    tail_length=nothing,
+    labeltext=nothing,
+    label_fontsize=12
 )
-    f, ax = setup_figure_from_map(gridmap, fig_xsize)
+    f, axes_for_inference_result, axes_for_gt = setup_animateable_pf_result_figure(gridmap, fig_xsize, labeltext, n_panels)
     fr = Observable(1)
 
     gt_path = @lift(fr_to_gt_path($fr))
@@ -126,51 +172,71 @@ function animateable_pf_results(
 
     alphas = @lift(logweights_to_alphas($pf_logweights))
     pf = nothing
-    for i in 1:length(pf_paths[])
-        pf = plot_path!(ax, @lift($pf_paths[i]); alpha=@lift($alphas[i]), colormap=[:white, :green])
+    for ax in axes_for_inference_result
+        for i in 1:length(pf_paths[])
+            pf = plot_path!(ax, @lift($pf_paths[i]); alpha=@lift($alphas[i]), colormap=[:white, :green], tail_length)
+        end
     end
 
-    gt = plot_path!(ax, gt_path; marker=:x, colormap=[:white, :purple])#:seaborn_rocket_gradient)
+    gt = nothing
+    for ax in axes_for_gt
+        gt = plot_path!(ax, gt_path; marker=:x, colormap=[:white, :purple], tail_length)#:seaborn_rocket_gradient)
+    end
 
     gt_obs_viz = nothing
     if !isnothing(fr_to_gt_obs)
-        gt_obs = @lift(fr_to_gt_obs($fr))
-        gt_obs_viz = plot_obs!(ax, @lift($gt_path[end]), gt_obs; is_continuous=true, show_lines_to_walls)
+        for ax in axes_for_gt
+            gt_obs = @lift(fr_to_gt_obs($fr))
+            gt_obs_viz = plot_obs!(ax, @lift($gt_path[end]), gt_obs; is_continuous=true, show_lines_to_walls)
+        end
     end
 
     particle_obs_viz = nothing
     if !isnothing(fr_to_particle_obss)
         particle_obss = @lift(fr_to_particle_obss($fr))
-        for i in 1:length(particle_obss[])
-            obs = @lift($particle_obss[i])
-            pos = @lift($pf_paths[i][end])
-            alpha = @lift($alphas[i])
-            particle_obs_viz = plot_obs!(ax, pos, obs; is_continuous=true, show_lines_to_walls, alpha, color=:darkolivegreen)
+        for ax in axes_for_inference_result
+            for i in 1:length(particle_obss[])
+                obs = @lift($particle_obss[i])
+                pos = @lift($pf_paths[i][end])
+                alpha = @lift($alphas[i])
+                particle_obs_viz = plot_obs!(ax, pos, obs; is_continuous=true, show_lines_to_walls, alpha, color=:darkolivegreen)
+            end
         end
     end
 
-    # l = Makie.Legend(
-    #     f[2, 1], [gt, pf], ["Ground Truth Trajectory", "Inferred Trajectory Particles"]
-    # )
-    # ax.tellheight = true
-    # l.tellheight = true
-    # l.tellwidth = true
+    plots_to_label = [
+        gt,
+        pf,
+        (isnothing(gt_obs_viz) ? () : (gt_obs_viz,))...,
+        (isnothing(particle_obs_viz) ? () : (particle_obs_viz,))...
+    ]
+    labels = [
+        "Ground Truth Trajectory",
+        "Inferred Weighted Particles",
+        (isnothing(gt_obs_viz) ? () : ("Observation unprojected w.r.t. true position",))...,
+        (isnothing(particle_obs_viz) ? () : ("Observations unprojected w.r.t. inferred position",))...
+    ]
 
-    Makie.axislegend(
-        ax, [
-            gt,
-            pf,
-            (isnothing(gt_obs_viz) ? () : (gt_obs_viz,))...,
-            (isnothing(particle_obs_viz) ? () : (particle_obs_viz,))...
-        ],
-        [
-            "Ground Truth Trajectory",
-            "Inferred Weighted Particles",
-            (isnothing(gt_obs_viz) ? () : ("Ground Truth Observation",))...,
-            (isnothing(particle_obs_viz) ? () : ("Inferred Particle Observations",))...
-        ],
-        position=:rb
-    )
+    if n_panels == 1
+        Makie.axislegend(ax, plots_to_label, labels, position=:rb)
+    elseif n_panels == 3
+        l = Makie.Legend(f[2, 1], plots_to_label, labels, labelsize=3/2 * label_fontsize)
+        # l.tellheight = true
+        # l.tellwidth = true
+    end
+
+    if !isnothing(labeltext)
+        pos = n_panels > 2 ? 3 : 2
+        l = Makie.Label(f[pos, :], labeltext, fontsize=label_fontsize)
+        l.tellheight=true
+        # Makie.contents(f[1, 1])[1].tellheight = true
+        # Makie.contents(f[1, 1])[1].tellwidth = true
+    end
+
+    Makie.rowsize!(f.layout, 1, Makie.Relative(1/2))
+    Makie.rowsize!(f.layout, 2, Makie.Relative(1/2))
+    Makie.colsize!(f.layout, 1, Makie.Relative(1/2))
+    Makie.colsize!(f.layout, 2, Makie.Relative(1/2))
 
     return f, fr
 end
@@ -457,5 +523,62 @@ function trace_gif(
     return gif_filename
 end
 
+### Grid inference steps visualization ###
+
+# All args are observables.
+function inference_steps_animation(
+    gridmap::Observable,
+    inferred_paths_to_this_point::Observable,
+    path_weights::Observable,
+    current_obs::Observable, # Observable over current dist vector
+    # Observable over a vector of grid points (each grid will be displayed)
+    # (Design question - should these be by particle?  I think no?)
+    grids_present::Observable,
+    current_label::Observable;
+    fig_xsize=800,
+    title=nothing,
+    tail_length=8
+)
+    f, ax = setup_figure_from_map(gridmap, fig_xsize)
+    if !isnothing(title)
+        ax.title = title
+    end
+
+    # Plot the grids
+    flattened_pts = @lift(collect(Iterators.flatten($grids_present)))
+    pts = @lift(map(Point2, $flattened_pts))
+    Makie.scatter!(ax, pts, color=:red, alpha=0.5)
+
+    alphas = @lift(logweights_to_alphas($path_weights))
+    pf = nothing
+    for i in 1:length(inferred_paths_to_this_point[])
+        pf = plot_path!(
+            ax, @lift($inferred_paths_to_this_point[i]);
+            alpha=@lift($alphas[i]), colormap=[:white, :green],
+            tail_length
+        )
+    end
+
+    # Plot the current observation
+    for i in 1:length(inferred_paths_to_this_point[])
+        plot_obs!(
+            ax, @lift($inferred_paths_to_this_point[i][end]), current_obs;
+            is_continuous=true, alpha=@lift($alphas[i]), color=:darkolivegreen,
+            show_lines_to_walls=false
+        )
+    end
+
+    # Plot the current label
+    l = Makie.Label(f[2, 1], current_label)
+    # Makie.rowsize!(f.layout, 1, Makie.Relative(10))
+    # Makie.rowsize!(f.layout, 2, Makie.Relative(1))
+    # Makie.rowsize!(f.layout, 1, Makie.Relative(5))
+    l.tellheight = true
+    l.tellwidth=false
+    ax.tellheight = false
+    ax.tellwidth=false
+
+    return f
+end
 
 end # module
