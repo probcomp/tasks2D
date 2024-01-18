@@ -1,8 +1,8 @@
-includet("inference.jl")
+include("inference2.jl")
 
 function make_bpf(pomdp, params, n_particles)
     trajectory_model = GenPOMDPs.ControlledTrajectoryModel(pomdp)
-    (t0_grid_args, update_grid_args, _) = default_pf_args(params, coarsest_stepsize=0.4)
+    (t0_grid_args, update_grid_args, _) = default_pf_args(params, coarsest_stepsize=0.2)
     return GenPOMDPs.pf(
         pomdp, params,
         obs -> (

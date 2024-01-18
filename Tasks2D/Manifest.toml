@@ -2,7 +2,7 @@
 
 julia_version = "1.10.0"
 manifest_format = "2.0"
-project_hash = "4cf377aa85cd09bb11a6a94c4f6a96cedf02f1ed"
+project_hash = "7823747c28e12dd85440738a1dc348576ee2cd14"
 
 [[deps.AStarSearch]]
 deps = ["DataStructures"]
