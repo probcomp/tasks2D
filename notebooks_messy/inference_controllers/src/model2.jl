@@ -123,8 +123,7 @@ end
 pos_to_step_cm(pos) = choicemap(
     (:noisy_next_pos, pos)
 )
-function nonoise_nextpos(pos, action, Δ, gridworld)
-    (a, _) = action
+function nonoise_nextpos(pos, a, Δ, gridworld)
     newpos = det_next_pos(pos, a, Δ)
     final_pos, did_collide = handle_wall_intersection(pos, newpos, gridworld)
     return final_pos

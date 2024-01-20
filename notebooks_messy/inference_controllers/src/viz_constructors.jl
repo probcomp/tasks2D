@@ -1,3 +1,4 @@
+import GLMakie
 function pf_result_gif(tr, pfstates;
     framerate=4, n_frames=length(pfstates) - 1, n_panels=3,
     tail_length=8, labeltext="", label_fontsize=16,
