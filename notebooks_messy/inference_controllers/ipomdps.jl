@@ -220,18 +220,17 @@ end
 end
 @gen function __adaptive_inference_controller(cstate, observation, ipomdp_params)
     observation = choicemap((:obs, observation))
-    t = GenPOMDPs.state_sequence(cstate.pfstate.traces[1])[end].t + 1
+    t = isnothing(cstate.pfstate) ? 0 : GenPOMDPs.state_sequence(cstate.pfstate.traces[1])[end].t + 1
 
     if haskey(ipomdp_params, :pf_states)
         # Use the provided PF state (e.g. we are loading in from a save.)
         # [In the future we should have caching in Gen
         # so we can do this in a more natural way.]
-        new_pf_state = ipomdp_params.pf_states[t]
+        new_pf_state = ipomdp_params.pf_states[t + 1]
     elseif isnothing(cstate.pfstate)
         new_pf_state = __adaptive_pf_init(cstate.ic_params, observation)
     else
         # Update the PF
-        t = GenPOMDPs.state_sequence(cstate.pfstate.traces[1])[end].t + 1
         action = ipomdp_params.actions[t]
         new_pf_state = __adaptive_pf_update(cstate.ic_params, cstate.pfstate, action, observation)
     end
