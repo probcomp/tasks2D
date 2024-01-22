@@ -24,12 +24,13 @@ function deserialize_trace_and_viz_actions(filename, pomdp_trajectory_model; arg
     return tr, s["viz_actions"]
 end
 
-function serialize_trace_and_pf_states(filename, trace, pf_states)
+function serialize_trace_and_pf_states(filename, trace, pf_states; metadata=Dict())
     Serialization.serialize(
         filename,
         Dict(
             "trace" => pomdp_trace_to_serializable(trace),
-            "pf_states" => [pf_state_to_serializable(pf_state) for pf_state in pf_states]
+            "pf_states" => [pf_state_to_serializable(pf_state) for pf_state in pf_states],
+            "metadata" => metadata
         )
     )
     println("Trace & pf states serialized to $filename.")

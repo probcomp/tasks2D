@@ -37,7 +37,7 @@ function plot_obs!(ax, pos::Observable, obs::Observable, angles=nothing; is_cont
         l = Makie.lines!(ax, linespec; linewidth=0.5, alpha, color)
     end
 
-    sc = Makie.scatter!(ax, obs_pts; alpha, color)
+    sc = Makie.scatter!(ax, obs_pts; alpha, color, markersize=16)
 
     if show_lines_to_walls
         return [sc, l]
@@ -64,8 +64,8 @@ function plot_path!(
     else
         colorrange = @lift((1, length($path)))
     end
-    l = Makie.lines!(ax, path_pts; color, alpha, colormap, colorrange)
-    sc = Makie.scatter!(ax, path_pts; color, alpha, marker, colormap, colorrange)
+    l = Makie.lines!(ax, path_pts; color, alpha, colormap, colorrange, linewidth=4)
+    sc = Makie.scatter!(ax, path_pts; color, alpha, marker, colormap, colorrange, markersize=16)
     return [l, sc]
 end
 function logweights_to_alphas(logweights)

@@ -116,7 +116,7 @@ function pf_result_gif(
 end
 
 # Returns `f, axes_for_inference_result, axes_for_gt`
-function setup_animateable_pf_result_figure(gridmap, grid_xsize, labeltext, n_panels)
+function setup_animateable_pf_result_figure(gridmap, grid_xsize, labeltext, n_panels; titlesize=12)
     !(gridmap isa Observable) && (gridmap = Observable(gridmap))
     if n_panels == 1
         f, ax = setup_figure_from_map(gridmap, grid_xsize)
@@ -125,8 +125,8 @@ function setup_animateable_pf_result_figure(gridmap, grid_xsize, labeltext, n_pa
         xsize, ysize = gridmap[].size
         fig_ysize = 12 + Int(floor(grid_xsize * ysize / xsize)) + (isnothing(labeltext) ? 0 : 30)
         f = Makie.Figure(;size=(2 * grid_xsize, fig_ysize))
-        ax1 = Makie.Axis(f[1, 1], aspect=Makie.DataAspect(), title="True world state")
-        ax2 = Makie.Axis(f[1, 2], aspect=Makie.DataAspect(), title="Belief state")
+        ax1 = Makie.Axis(f[1, 1]; aspect=Makie.DataAspect(), title="True world state", text)
+        ax2 = Makie.Axis(f[1, 2]; aspect=Makie.DataAspect(), title="Belief state", titlesize)
         Makie.hidedecorations!(ax1)
         Makie.hidedecorations!(ax2)
         gridworldplot!(ax1, gridmap; squarecolors=DEFAULT_SQUARE_COLORS)
@@ -136,9 +136,9 @@ function setup_animateable_pf_result_figure(gridmap, grid_xsize, labeltext, n_pa
         xsize, ysize = gridmap[].size
         fig_ysize = 12 + Int(floor(grid_xsize * ysize / xsize)) + (isnothing(labeltext) ? 0 : 30)
         f = Makie.Figure(;size=(2 * grid_xsize, 2 * fig_ysize))
-        ax1 = Makie.Axis(f[1, 1], aspect=Makie.DataAspect(), title="True world state")
-        ax2 = Makie.Axis(f[1, 2], aspect=Makie.DataAspect(), title="Belief state")
-        ax3 = Makie.Axis(f[2, 2], aspect=Makie.DataAspect(), title="True world state + belief state overlay")
+        ax1 = Makie.Axis(f[1, 1]; aspect=Makie.DataAspect(), title="True world state", titlesize)
+        ax2 = Makie.Axis(f[1, 2]; aspect=Makie.DataAspect(), title="Belief state", titlesize)
+        ax3 = Makie.Axis(f[2, 2]; aspect=Makie.DataAspect(), title="True world state + belief state overlay", titlesize)
         Makie.hidedecorations!(ax1)
         Makie.hidedecorations!(ax2)
         Makie.hidedecorations!(ax3)
@@ -161,9 +161,10 @@ function animateable_pf_results(
     n_panels=1,
     tail_length=nothing,
     labeltext=nothing,
-    label_fontsize=12
+    label_fontsize=12,
+    big_label_text=nothing
 )
-    f, axes_for_inference_result, axes_for_gt = setup_animateable_pf_result_figure(gridmap, fig_xsize, labeltext, n_panels)
+    f, axes_for_inference_result, axes_for_gt = setup_animateable_pf_result_figure(gridmap, fig_xsize, labeltext, n_panels; titlesize=3/2 * label_fontsize)
     fr = Observable(1)
 
     gt_path = @lift(fr_to_gt_path($fr))
@@ -199,7 +200,7 @@ function animateable_pf_results(
                 obs = @lift($particle_obss[i])
                 pos = @lift($pf_paths[i][end])
                 alpha = @lift($alphas[i])
-                particle_obs_viz = plot_obs!(ax, pos, obs; is_continuous=true, show_lines_to_walls, alpha, color=:darkolivegreen)
+                particle_obs_viz = plot_obs!(ax, pos, obs; is_continuous=true, show_lines_to_walls, alpha, color=:lightgreen)
             end
         end
     end
@@ -220,7 +221,14 @@ function animateable_pf_results(
     if n_panels == 1
         Makie.axislegend(ax, plots_to_label, labels, position=:rb)
     elseif n_panels == 3
-        l = Makie.Legend(f[2, 1], plots_to_label, labels, labelsize=3/2 * label_fontsize)
+        if !isnothing(big_label_text)
+            g = Makie.GridLayout(f[2, 1])
+            l = Makie.Label(g[1, 1], Makie.@lift(big_label_text($fr)), fontsize=2 * label_fontsize)
+            l.tellheight=true
+            leg = Makie.Legend(g[2, 1], plots_to_label, labels, labelsize=3/2 * label_fontsize)
+        else
+            leg = Makie.Legend(f[2, 1], plots_to_label, labels, labelsize=3/2 * label_fontsize)
+        end
         # l.tellheight = true
         # l.tellwidth = true
     end

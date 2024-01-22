@@ -1,14 +1,14 @@
 ######################
 # Action controllers #
 ######################
-@gen function _random_controller(st, obs)
+@gen function _random_controller(st, obs, params)
     aidx ~ categorical([0.25, 0.25, 0.25, 0.25])
     action = [:up, :right, :left, :down][aidx]
     return (action, nothing)
 end
 random_controller = GenPOMDPs.Controller(_random_controller, nothing)
 
-@gen function _meandering_controller(current_direction, obs)
+@gen function _meandering_controller(current_direction, obs, params)
     change_dir ~ bernoulli(0.2)
     if change_dir || isnothing(current_direction)
         aidx ~ categorical([0.25, 0.25, 0.25, 0.25])
@@ -20,7 +20,7 @@ random_controller = GenPOMDPs.Controller(_random_controller, nothing)
 end
 meandering_controller = GenPOMDPs.Controller(_meandering_controller, nothing)
 
-@gen function _meandering_wallavoiding_controller(current_direction, obs)
+@gen function _meandering_wallavoiding_controller(current_direction, obs, params)
     # d, r, u, l
     directional_dist_inds = [Int(floor(i)) for i in LinRange(1, length(obs) + 1, 5)[1:4]]
     relevant_dists = obs[directional_dist_inds]
