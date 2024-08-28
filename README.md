@@ -24,9 +24,9 @@ Also relevant:
         Go to AWS (register on aws.mit.edu if you haven't yet).  Go to EC2.  Click "Launch Instance".  Click "Browse AMIs" and find "Deep Learning AMI GPU PyTorch 1.13.1 (Ubuntu 20.04)".
         Set up the instance with a bit of storage (I didn't need a ton.), and whatever other setup details it asks for.  Then SSH onto the instance.  (It will prompt you to set up an SSH key
         on the way, which you'll need to download to your computer to SSH from your computer's shell.)  Then what I did is download the VSCode extension for editing remotely, and added the SSH URL as a remote host.  (By default, the URL will be different each time the AWS instance launches, so to keep it static, you may also want to set up an "Elastic IP" in AWS, and then associate that with the instance.  Then the URL will be static, so VSCode can more easily connect to it without manual work each time.)  Then I just used the built-in Jupyter notebook viewer in VSCode!  (Had to install Julia in VScode, and in the AWS instance.  For that, I installed juliaup via a curl command I found online, and used it to install Julia 1.8.)
-- Use Julia 1.8 [not 1.9; for some reason this causes bugs with the current version of the CUDA raycasting code]
 - Git clone this repository.
-- From within the `tasks2D/` directory (top level directory of the repo), activate Julia 1.8.
+- Git clone the GenPOMDPs repository as a sibling directory to this one.
+- From within the `tasks2D/` directory (top level directory of the repo), activate Julia.
 - From within Julia, run `] activate Tasks2D` to activate the `Tasks2D` environment.
 - From within Julia, run `julia> include("setup.jl")` to install a few dependencies which the package
   manager has trouble handling the standard way.  (If this doesn't work, try manually installing these packages.

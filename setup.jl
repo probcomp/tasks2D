@@ -7,7 +7,7 @@ Pkg.develop(path="./GridWorlds")
 Pkg.develop(path="./LineWorlds")
 
 try
-    Pkg.develop("path=../GenPOMDPs.jl")
+    Pkg.develop(path="../GenPOMDPs.jl")
 catch e
     @error "Setup file expected GenPOMDPs to be locally installed at ../.  GenPOMDPs was not found here; manual installation is therefore required."
     throw(e)
