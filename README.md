@@ -18,7 +18,7 @@ Also relevant:
 
 ### Installation
 
-- I recommend running this on an AWS instance with a GPU.  (The code runs much faster on GPU, and the GPU code is only compatible
+- [This is slightly outdated now; I have also run things locally on CPU only oftentimes.] I recommend running this on an AWS instance with a GPU.  (The code runs much faster on GPU, and the GPU code is only compatible
   with CUDA.  I also haven't tested on CPU only in a little while.)
   - > To launch the same type of EC2 instance I am using:
         Go to AWS (register on aws.mit.edu if you haven't yet).  Go to EC2.  Click "Launch Instance".  Click "Browse AMIs" and find "Deep Learning AMI GPU PyTorch 1.13.1 (Ubuntu 20.04)".
@@ -39,3 +39,7 @@ Also relevant:
   (I have tested `KidnappedRobot.ipynb` and `RoomSearch.ipynb` recently, and they should work.  The `Localization.ipynb` demo is older,
   and uses a different plotting library.  It has interactive demo code, though, which is nice, and may be worth checking out if anyone
   wants to try to develop interactive demos for the ProbProg summer school.  This plotting library works in browser Jupyter notebooks, but not in VSCode Jupyter notebooks.)
+
+### Installation notes
+
+1. *Issues with gif display from Julia*: Try running `import IJulia; IJulia.notebook()` and making sure you can display a gif via `display("image/gif", read("path/to/gif.gif"))`.  Sometimes VSCode will somehow interface with a version of Julia that hasn't configured the Juypter kernel as needed to view gifs, and running this IJulia command seems to fix it.
