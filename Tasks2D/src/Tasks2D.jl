@@ -5,6 +5,6 @@ and the environment needed to run the notebooks.
 module Tasks2D
 
 # Tasks2D.Distributions
-include("Distributions.jl")
+include("distributions.jl")
 
 end # module Tasks2D
